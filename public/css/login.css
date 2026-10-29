@@ -1,0 +1,101 @@
+/**
+ * login.css - Mantis Dashboard Aesthetic for Simpan.in
+ */
+
+:root {
+    --color-primary: #1677ff;
+    --color-primary-dark: #0958d9;
+    --color-primary-soft: rgba(22, 119, 255, 0.08);
+    --font-sans: 'Public Sans', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+body {
+    font-family: var(--font-sans);
+    transition: background-color 0.2s ease, color 0.2s ease;
+    margin: 0;
+}
+
+/* Light Mode (Mantis Clean) */
+html.light body {
+    background-color: #fafafb !important;
+    color: #262626;
+}
+
+html.light .login-card {
+    background: #ffffff !important;
+    border: 1px solid #f0f0f0 !important;
+    border-radius: 10px !important;
+    box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.06) !important;
+}
+
+html.light .login-input {
+    background: #f5f5f5 !important;
+    border: 1px solid #e8e8e8 !important;
+    border-radius: 8px !important;
+    color: #262626 !important;
+}
+
+html.light .login-input:focus {
+    background: #ffffff !important;
+    border-color: var(--color-primary) !important;
+    box-shadow: 0 0 0 3px var(--color-primary-soft) !important;
+}
+
+html.light .demo-box {
+    background: #fbfbfb !important;
+    border: 1px solid #f0f0f0 !important;
+    border-radius: 8px !important;
+}
+
+/* Dark Mode (Mantis Deep Dark) */
+html.dark body {
+    background-color: #141414 !important;
+    color: #e6e6e6;
+}
+
+html.dark .login-card {
+    background: #1f1f1f !important;
+    border: 1px solid #303030 !important;
+    border-radius: 10px !important;
+    box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.4) !important;
+}
+
+html.dark .login-input {
+    background: #262626 !important;
+    border: 1px solid #363636 !important;
+    border-radius: 8px !important;
+    color: #f0f0f0 !important;
+}
+
+html.dark .login-input:focus {
+    background: #1f1f1f !important;
+    border-color: var(--color-primary) !important;
+    box-shadow: 0 0 0 3px rgba(22, 119, 255, 0.2) !important;
+}
+
+html.dark .demo-box {
+    background: #262626 !important;
+    border: 1px solid #333333 !important;
+    border-radius: 8px !important;
+}
+
+/* Mantis Submit Button */
+.btn-login-submit {
+    background: var(--color-primary) !important;
+    color: #ffffff !important;
+    font-weight: 600;
+    border-radius: 8px !important;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 2px 6px 0 rgba(22, 119, 255, 0.25) !important;
+    transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+}
+
+.btn-login-submit:hover {
+    background: var(--color-primary-dark) !important;
+    box-shadow: 0 4px 10px 0 rgba(22, 119, 255, 0.35) !important;
+}
+
+.btn-login-submit:active {
+    transform: translateY(1px);
+}

@@ -1,0 +1,172 @@
+/**
+ * app.css - Stylesheet Simpan.in
+ * Tema: Modern Cyber / Glassmorphism dengan Aksen Neon Purple & Cyan Gradient
+ */
+
+/* ------------------------------------------------------------- */
+/* TEMA GELAP (DARK MODE - DEFAULT)                             */
+/* ------------------------------------------------------------- */
+html.dark {
+    --bg-base: #0B0F19;
+    --surface-glass: rgba(15, 23, 42, 0.75);
+    --border-glass: rgba(255, 255, 255, 0.08);
+    --text-main: #F8FAFC;
+    --text-sub: #94A3B8;
+    --text-muted: #64748B;
+    --card-surface: rgba(17, 24, 39, 0.6);
+    --card-border: rgba(255, 255, 255, 0.06);
+    --scrollbar-track: #0B0F19;
+    --scrollbar-thumb: rgba(168, 85, 247, 0.3);
+}
+
+/* ------------------------------------------------------------- */
+/* TEMA TERANG (LIGHT MODE)                                      */
+/* ------------------------------------------------------------- */
+html.light {
+    --bg-base: #F8FAFC;
+    --surface-glass: rgba(255, 255, 255, 0.9);
+    --border-glass: #E2E8F0;
+    --text-main: #0F172A;
+    --text-sub: #334155;
+    --text-muted: #64748B;
+    --card-surface: #FFFFFF;
+    --card-border: #E2E8F0;
+    --scrollbar-track: #F1F5F9;
+    --scrollbar-thumb: #CBD5E1;
+}
+
+/* ------------------------------------------------------------- */
+/* DASAR ELEMEN                                                  */
+/* ------------------------------------------------------------- */
+body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background-color: var(--bg-base);
+    color: var(--text-main);
+    transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+.glass {
+    background: var(--surface-glass);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border-glass);
+    transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+/* ------------------------------------------------------------- */
+/* GRADIEN & AKSEN NEON                                          */
+/* ------------------------------------------------------------- */
+.accent-gradient {
+    background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%) !important;
+    color: #FFFFFF !important;
+}
+
+.accent-gradient-cyan {
+    background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%) !important;
+    color: #FFFFFF !important;
+}
+
+.neon-glow {
+    filter: drop-shadow(0 0 10px rgba(168, 85, 247, 0.5));
+}
+
+.neon-glow-cyan {
+    filter: drop-shadow(0 0 10px rgba(34, 211, 238, 0.5));
+}
+
+/* ------------------------------------------------------------- */
+/* SIDEBAR & NAVIGASI                                            */
+/* ------------------------------------------------------------- */
+.sidebar-link {
+    transition: all 0.2s ease-in-out;
+}
+
+.sidebar-link:hover {
+    background-color: rgba(168, 85, 247, 0.1);
+    color: #A855F7;
+}
+
+html.dark .sidebar-link.active {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(168, 85, 247, 0.2));
+    border: 1px solid rgba(168, 85, 247, 0.3);
+    color: #FFFFFF;
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.2);
+}
+
+html.light .sidebar-link.active {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(168, 85, 247, 0.15));
+    border: 1px solid rgba(168, 85, 247, 0.3);
+    color: #6D28D9;
+    font-weight: 700;
+}
+
+/* ------------------------------------------------------------- */
+/* OVERRIDE TEMA TERANG (LIGHT MODE TUNING)                      */
+/* ------------------------------------------------------------- */
+html.light .glass {
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
+}
+
+html.light aside#sidebar {
+    background: rgba(255, 255, 255, 0.95);
+    border-right-color: #E2E8F0;
+}
+
+html.light header {
+    background: rgba(255, 255, 255, 0.85);
+    border-bottom-color: #E2E8F0;
+}
+
+html.light .text-slate-400 {
+    color: #64748B !important;
+}
+
+html.light .text-slate-500 {
+    color: #64748B !important;
+}
+
+html.light .border-white\/5,
+html.light .border-white\/10 {
+    border-color: #E2E8F0 !important;
+}
+
+html.light .bg-white\/5,
+html.light .bg-white\/10 {
+    background-color: #F1F5F9 !important;
+}
+
+html.light table th {
+    background-color: #F8FAFC !important;
+    color: #475569 !important;
+    border-color: #E2E8F0 !important;
+}
+
+html.light table td {
+    color: #1E293B !important;
+    border-color: #F1F5F9 !important;
+}
+
+html.light table tr:hover {
+    background-color: #F8FAFC !important;
+}
+
+/* ------------------------------------------------------------- */
+/* SCROLLBAR CUSTOM                                              */
+/* ------------------------------------------------------------- */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 9999px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(168, 85, 247, 0.6);
+}
