@@ -9,9 +9,11 @@ use App\Http\Controllers\Letters\SuratKeluarController;
 use App\Http\Controllers\Letters\SuratMasukController;
 use App\Http\Controllers\Operations\BackupController;
 use App\Http\Controllers\Operations\RecycleBinController;
+use App\Http\Controllers\Organization\InstitutionProfileController;
 use App\Http\Controllers\Organization\OrganizationProfileController;
 use App\Http\Controllers\Organization\TandaTanganController;
 use App\Http\Controllers\Organization\UserController;
+use App\Http\Controllers\Setup\SetupWizardController;
 use App\Models\Disposisi;
 use App\Models\KlasifikasiSurat;
 use App\Models\SuratKeluar;
@@ -24,6 +26,12 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return redirect()->route('login');
 });
+
+// -----------------------------------------------------------------------
+// Wizard Setup Awal (Hanya untuk instalasi yang belum disetup)
+// -----------------------------------------------------------------------
+Route::get('/setup', [SetupWizardController::class, 'index'])->name('setup.index');
+Route::post('/setup', [SetupWizardController::class, 'store'])->name('setup.store');
 
 // -----------------------------------------------------------------------
 // Auth Routes (Login / Logout)
@@ -94,6 +102,12 @@ Route::middleware(['auth'])->group(function () {
     });
     Route::resource('disposisi', DisposisiController::class)->only(['index', 'show']);
     Route::patch('/disposisi/{disposisi}/status', [DisposisiController::class, 'updateStatus'])->name('disposisi.update-status');
+
+    // Pengaturan Profil Instansi & Kamus Istilah Dinamis (Admin)
+    Route::middleware(['role:Admin|Admin Instansi'])->group(function () {
+        Route::get('/pengaturan/profil', [InstitutionProfileController::class, 'edit'])->name('pengaturan.profil.edit');
+        Route::put('/pengaturan/profil', [InstitutionProfileController::class, 'update'])->name('pengaturan.profil.update');
+    });
 
     // Admin Suite (Eksklusif: Admin)
     Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['role:Admin']], function () {
