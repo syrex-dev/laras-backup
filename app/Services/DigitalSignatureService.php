@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Log;
 
 // TCPDF must be explicitly required BEFORE FPDI loads, because FPDI\Tcpdf\Fpdi extends \TCPDF.
 // PHP's autoloader won't resolve the parent class in time when FPDI is loaded first.
-if (!class_exists('TCPDF')) {
+if (! class_exists('TCPDF')) {
     require_once base_path('vendor/tecnickcom/tcpdf/tcpdf.php');
 }
 
@@ -39,25 +39,25 @@ class DigitalSignatureService
     /**
      * Terapkan tanda tangan digital ke PDF yang sudah dirender.
      *
-     * @param  string  $sourcePdfPath   Absolute path ke PDF sumber (output DOMPDF, temp file)
-     * @param  string  $outputPdfPath   Absolute path tujuan file PDF yang sudah di-sign
-     * @param  array   $signerInfo      Metadata penanda tangan: name, location, reason, contact
-     * @return bool                     true jika berhasil
+     * @param  string  $sourcePdfPath  Absolute path ke PDF sumber (output DOMPDF, temp file)
+     * @param  string  $outputPdfPath  Absolute path tujuan file PDF yang sudah di-sign
+     * @param  array  $signerInfo  Metadata penanda tangan: name, location, reason, contact
+     * @return bool true jika berhasil
      *
      * @throws \RuntimeException jika sertifikat tidak ditemukan atau gagal di-apply
      */
     public function signPdf(string $sourcePdfPath, string $outputPdfPath, array $signerInfo = []): bool
     {
-        $certFile = $this->certsDir . DIRECTORY_SEPARATOR . 'simpanin_cert.crt';
-        $keyFile  = $this->certsDir . DIRECTORY_SEPARATOR . 'simpanin_key.pem';
+        $certFile = $this->certsDir.DIRECTORY_SEPARATOR.'simpanin_cert.crt';
+        $keyFile = $this->certsDir.DIRECTORY_SEPARATOR.'simpanin_key.pem';
 
         // ------------------------------------------------------------------
         // Validasi keberadaan file sertifikat
         // ------------------------------------------------------------------
-        if (!file_exists($certFile) || !file_exists($keyFile)) {
+        if (! file_exists($certFile) || ! file_exists($keyFile)) {
             throw new \RuntimeException(
-                "Sertifikat digital tidak ditemukan di: {$this->certsDir}. " .
-                "Jalankan perintah OpenSSL untuk membuat sertifikat QA terlebih dahulu."
+                "Sertifikat digital tidak ditemukan di: {$this->certsDir}. ".
+                'Jalankan perintah OpenSSL untuk membuat sertifikat QA terlebih dahulu.'
             );
         }
 
@@ -65,24 +65,24 @@ class DigitalSignatureService
         // Baca konten sertifikat dan private key
         // ------------------------------------------------------------------
         $certContent = file_get_contents($certFile);
-        $keyContent  = file_get_contents($keyFile);
+        $keyContent = file_get_contents($keyFile);
 
         if ($certContent === false || $keyContent === false) {
-            throw new \RuntimeException("Gagal membaca file sertifikat atau private key.");
+            throw new \RuntimeException('Gagal membaca file sertifikat atau private key.');
         }
 
         // ------------------------------------------------------------------
         // Metadata tanda tangan
         // ------------------------------------------------------------------
-        $signerName     = $signerInfo['name']     ?? 'Ketua HIMASE';
-        $signerLocation = $signerInfo['location']  ?? 'Sumedang, Jawa Barat';
-        $signerReason   = $signerInfo['reason']    ?? 'Pengesahan Digital Simpan.in';
-        $signerContact  = $signerInfo['contact']   ?? 'ketua@himase.ac.id';
+        $signerName = $signerInfo['name'] ?? 'Ketua HIMASE';
+        $signerLocation = $signerInfo['location'] ?? 'Sumedang, Jawa Barat';
+        $signerReason = $signerInfo['reason'] ?? 'Pengesahan Digital Simpan.in';
+        $signerContact = $signerInfo['contact'] ?? 'ketua@himase.ac.id';
 
         // ------------------------------------------------------------------
         // Inisiasi TCPDF + FPDI
         // ------------------------------------------------------------------
-        $pdf = new Fpdi();
+        $pdf = new Fpdi;
         $pdf->setPrintHeader(false);
         $pdf->setPrintFooter(false);
 
@@ -91,7 +91,7 @@ class DigitalSignatureService
 
         for ($i = 1; $i <= $pageCount; $i++) {
             $tplId = $pdf->importPage($i);
-            $size  = $pdf->getTemplateSize($tplId);
+            $size = $pdf->getTemplateSize($tplId);
 
             // Sesuaikan orientasi halaman
             $orientation = ($size['width'] > $size['height']) ? 'L' : 'P';
@@ -110,15 +110,15 @@ class DigitalSignatureService
         //   info      → array metadata
         // ------------------------------------------------------------------
         $pdf->setSignature(
-            'file://' . $certFile,   // certificate
-            'file://' . $keyFile,    // private key
+            'file://'.$certFile,   // certificate
+            'file://'.$keyFile,    // private key
             'simpanin2026',          // passphrase (sesuai saat generate openssl)
             '',                      // extra certs chain (kosong = self-signed)
             2,                       // certtype: 2 = cert embedded in signature
             [
-                'Name'        => $signerName,
-                'Location'    => $signerLocation,
-                'Reason'      => $signerReason,
+                'Name' => $signerName,
+                'Location' => $signerLocation,
+                'Reason' => $signerReason,
                 'ContactInfo' => $signerContact,
             ]
         );
@@ -142,7 +142,7 @@ class DigitalSignatureService
      * Wrapper aman: terapkan tanda tangan jika sertifikat tersedia.
      * Jika tidak tersedia, salin PDF sumber ke tujuan tanpa signing (graceful degradation).
      *
-     * @return bool  true = signed berhasil, false = degraded (disalin tanpa signing)
+     * @return bool true = signed berhasil, false = degraded (disalin tanpa signing)
      */
     public function signOrCopy(string $sourcePdfPath, string $outputPdfPath, array $signerInfo = []): bool
     {
@@ -151,16 +151,19 @@ class DigitalSignatureService
             Log::info('[DigitalSignature] PDF berhasil di-sign secara kriptografis.', [
                 'output' => $outputPdfPath,
             ]);
+
             return true;
         } catch (\RuntimeException $e) {
             // Sertifikat tidak ditemukan → graceful degradation
-            Log::warning('[DigitalSignature] ' . $e->getMessage() . ' — PDF disimpan tanpa tanda tangan digital.');
+            Log::warning('[DigitalSignature] '.$e->getMessage().' — PDF disimpan tanpa tanda tangan digital.');
             copy($sourcePdfPath, $outputPdfPath);
+
             return false;
         } catch (\Exception $e) {
-            Log::error('[DigitalSignature] Gagal sign PDF: ' . $e->getMessage());
+            Log::error('[DigitalSignature] Gagal sign PDF: '.$e->getMessage());
             // Tetap salin PDF agar dokumen tidak hilang
             copy($sourcePdfPath, $outputPdfPath);
+
             return false;
         }
     }

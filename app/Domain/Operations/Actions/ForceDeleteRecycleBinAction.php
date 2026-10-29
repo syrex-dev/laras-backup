@@ -27,10 +27,10 @@ class ForceDeleteRecycleBinAction
     protected function resolveModelClass(string $type): string
     {
         return match ($type) {
-            'surat-masuk'  => SuratMasuk::class,
+            'surat-masuk' => SuratMasuk::class,
             'surat-keluar' => SuratKeluar::class,
-            'disposisi'    => Disposisi::class,
-            default        => throw new \InvalidArgumentException("Tipe model tidak valid: {$type}"),
+            'disposisi' => Disposisi::class,
+            default => throw new \InvalidArgumentException("Tipe model tidak valid: {$type}"),
         };
     }
 }

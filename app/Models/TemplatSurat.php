@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 /**
  * @method bool|null delete()
- * @mixin \Illuminate\Database\Eloquent\Builder
+ *
+ * @mixin Builder
  */
 class TemplatSurat extends Model
 {

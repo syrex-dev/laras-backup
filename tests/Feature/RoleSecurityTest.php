@@ -6,6 +6,7 @@ use App\Models\Disposisi;
 use App\Models\KlasifikasiSurat;
 use App\Models\SuratKeluar;
 use App\Models\SuratMasuk;
+use App\Models\TemplatSurat;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -100,22 +101,22 @@ class RoleSecurityTest extends TestCase
         ]);
 
         $this->actingAs($sekretaris)
-            ->get('/disposisi/' . $disposisi->id)
+            ->get('/disposisi/'.$disposisi->id)
             ->assertStatus(403);
 
         $this->actingAs($sekretaris)
-            ->patch('/disposisi/' . $disposisi->id . '/status', [
+            ->patch('/disposisi/'.$disposisi->id.'/status', [
                 '_token' => csrf_token(),
                 'status' => 'selesai',
             ])
             ->assertStatus(403);
 
         $this->actingAs($staf)
-            ->get('/disposisi/' . $disposisi->id)
+            ->get('/disposisi/'.$disposisi->id)
             ->assertOk();
 
         $this->actingAs($staf)
-            ->patch('/disposisi/' . $disposisi->id . '/status', [
+            ->patch('/disposisi/'.$disposisi->id.'/status', [
                 '_token' => csrf_token(),
                 'status' => 'selesai',
             ])
@@ -134,7 +135,7 @@ class RoleSecurityTest extends TestCase
         $pimpinan = $this->createUser('Pimpinan', 'pimpinan.template@example.com', 'Pimpinan Template');
         $klasifikasi = $this->createKlasifikasi();
 
-        $template = \App\Models\TemplatSurat::create([
+        $template = TemplatSurat::create([
             'nama_templat' => 'Template Uji QA',
             'path_file' => 'templates/qa-template.html',
         ]);
@@ -154,7 +155,7 @@ class RoleSecurityTest extends TestCase
         ]);
 
         $this->actingAs($sekretaris)
-            ->get('/surat-keluar/' . $suratKeluar->id . '/edit')
+            ->get('/surat-keluar/'.$suratKeluar->id.'/edit')
             ->assertOk()
             ->assertSee('Template Surat')
             ->assertSee('Template Uji QA');
@@ -180,7 +181,7 @@ class RoleSecurityTest extends TestCase
             'qr_token' => 'VALID-QA-TOKEN-123',
         ]);
 
-        $this->get('/verify/' . $surat->qr_token)
+        $this->get('/verify/'.$surat->qr_token)
             ->assertOk();
 
         $this->get('/verify/not-real-token-999')

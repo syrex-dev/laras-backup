@@ -11,12 +11,12 @@ class UpdateUserAction
     public function execute(User $user, array $data): bool
     {
         $updateData = [
-            'nama'    => $data['nama'],
-            'email'   => $data['email'],
+            'nama' => $data['nama'],
+            'email' => $data['email'],
             'role_id' => $data['role_id'],
         ];
 
-        if (!empty($data['password'])) {
+        if (! empty($data['password'])) {
             $updateData['password'] = Hash::make($data['password']);
         }
 

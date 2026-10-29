@@ -14,6 +14,7 @@ class KlasifikasiSuratController extends Controller
     public function index()
     {
         $klasifikasi = KlasifikasiSurat::query()->latest()->paginate(10);
+
         return view('archive.klasifikasi-surat.index', compact('klasifikasi'));
     }
 

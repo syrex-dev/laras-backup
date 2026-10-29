@@ -12,24 +12,24 @@ class LicenseManager
     public function getLicenseState(): array
     {
         return [
-            'status'            => 'active', // active, grace_period, expired
-            'tier'              => 'standar', // dasar, standar, lanjutan
-            'tier_name'         => 'Standar (Politeknik & Kampus Menengah)',
-            'max_users'         => 100,
-            'max_storage_gb'    => 50,
-            'expires_at'        => now()->addYear()->format('Y-m-d'),
-            'days_remaining'    => 365,
-            'entitlements'      => [
-                'surat_masuk'         => true,
-                'surat_keluar'        => true,
-                'disposisi'           => true,
-                'tte_pki'             => true,
-                'qr_verification'     => true,
-                'ocr'                 => true,
-                'whatsapp_gateway'    => false,
-                'sso'                 => false,
-                'audit_logs'          => true,
-                'backup_restore'      => true,
+            'status' => 'active', // active, grace_period, expired
+            'tier' => 'standar', // dasar, standar, lanjutan
+            'tier_name' => 'Standar (Politeknik & Kampus Menengah)',
+            'max_users' => 100,
+            'max_storage_gb' => 50,
+            'expires_at' => now()->addYear()->format('Y-m-d'),
+            'days_remaining' => 365,
+            'entitlements' => [
+                'surat_masuk' => true,
+                'surat_keluar' => true,
+                'disposisi' => true,
+                'tte_pki' => true,
+                'qr_verification' => true,
+                'ocr' => true,
+                'whatsapp_gateway' => false,
+                'sso' => false,
+                'audit_logs' => true,
+                'backup_restore' => true,
             ],
         ];
     }
@@ -40,6 +40,7 @@ class LicenseManager
     public function isReadOnly(): bool
     {
         $state = $this->getLicenseState();
+
         return $state['status'] === 'expired';
     }
 
@@ -49,7 +50,8 @@ class LicenseManager
     public function hasFeature(string $featureKey): bool
     {
         $state = $this->getLicenseState();
-        return !empty($state['entitlements'][$featureKey]);
+
+        return ! empty($state['entitlements'][$featureKey]);
     }
 
     /**
@@ -63,11 +65,11 @@ class LicenseManager
         $usagePercent = round(($currentUserCount / max(1, $maxUsers)) * 100, 1);
 
         return [
-            'current'       => $currentUserCount,
-            'max'           => $maxUsers,
+            'current' => $currentUserCount,
+            'max' => $maxUsers,
             'usage_percent' => $usagePercent,
-            'is_exceeded'   => $currentUserCount > $maxUsers,
-            'is_warning'    => $usagePercent >= 80,
+            'is_exceeded' => $currentUserCount > $maxUsers,
+            'is_warning' => $usagePercent >= 80,
         ];
     }
 }

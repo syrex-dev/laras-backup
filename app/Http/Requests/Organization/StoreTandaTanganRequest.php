@@ -22,9 +22,9 @@ class StoreTandaTanganRequest extends FormRequest
     {
         return [
             'tanda_tangan.required' => 'Silakan pilih file gambar tanda tangan terlebih dahulu.',
-            'tanda_tangan.image'    => 'File harus berupa gambar.',
-            'tanda_tangan.mimes'    => 'Format gambar harus berupa PNG, JPG, atau JPEG.',
-            'tanda_tangan.max'      => 'Ukuran gambar maksimal adalah 2 MB.',
+            'tanda_tangan.image' => 'File harus berupa gambar.',
+            'tanda_tangan.mimes' => 'Format gambar harus berupa PNG, JPG, atau JPEG.',
+            'tanda_tangan.max' => 'Ukuran gambar maksimal adalah 2 MB.',
         ];
     }
 }

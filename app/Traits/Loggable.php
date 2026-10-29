@@ -11,11 +11,11 @@ trait Loggable
     public function logActivity($aksi, $namaTabel = null, $idRekaman = null)
     {
         LogAktivitas::create([
-            'user_id'    => Auth::id(),
-            'aksi'       => $aksi,
+            'user_id' => Auth::id(),
+            'aksi' => $aksi,
             'nama_tabel' => $namaTabel,
             'id_rekaman' => $idRekaman,
-            'alamat_ip'  => Request::ip(),
+            'alamat_ip' => Request::ip(),
         ]);
     }
 }

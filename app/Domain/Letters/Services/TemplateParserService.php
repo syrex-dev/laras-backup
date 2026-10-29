@@ -19,17 +19,17 @@ class TemplateParserService
             $upperKey = strtoupper($key);
 
             // Bracket-style: [NOMOR_SURAT], [LAMPIRAN], [TUJUAN_SURAT]
-            $map["[{$upperKey}]"]     = (string) $value;
+            $map["[{$upperKey}]"] = (string) $value;
 
             // Blade-style (dengan spasi): {{ nomor_surat }}
-            $map["{{ {$key} }}"]      = (string) $value;
+            $map["{{ {$key} }}"] = (string) $value;
 
             // Blade-style (tanpa spasi): {{nomor_surat}}
-            $map["{{{$key}}}"]        = (string) $value;
+            $map["{{{$key}}}"] = (string) $value;
 
             // Blade-style kapital (toleransi): {{ NOMOR_SURAT }}
             $map["{{ {$upperKey} }}"] = (string) $value;
-            $map["{{{$upperKey}}}"]   = (string) $value;
+            $map["{{{$upperKey}}}"] = (string) $value;
         }
 
         return $map;

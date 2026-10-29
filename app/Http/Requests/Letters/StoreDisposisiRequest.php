@@ -15,9 +15,9 @@ class StoreDisposisiRequest extends FormRequest
     {
         return [
             'surat_masuk_id' => 'required|exists:surat_masuk,id',
-            'penerima_id'    => 'required|exists:users,id',
-            'instruksi'      => 'required|string',
-            'prioritas'      => 'required|in:segera,rahasia,biasa',
+            'penerima_id' => 'required|exists:users,id',
+            'instruksi' => 'required|string',
+            'prioritas' => 'required|in:segera,rahasia,biasa',
         ];
     }
 }

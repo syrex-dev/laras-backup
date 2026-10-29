@@ -2,10 +2,11 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * @mixin \Illuminate\Database\Eloquent\Builder
+ * @mixin Builder
  */
 class KlasifikasiSurat extends Model
 {
@@ -26,5 +27,4 @@ class KlasifikasiSurat extends Model
     {
         return $this->hasMany(SuratMasuk::class, 'klasifikasi_id');
     }
-
 }

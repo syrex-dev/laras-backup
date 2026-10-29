@@ -12,7 +12,7 @@ return new class extends Migration
             if (Schema::hasColumn('users', 'name')) {
                 $table->renameColumn('name', 'nama');
             }
-            if (!Schema::hasColumn('users', 'role_id')) {
+            if (! Schema::hasColumn('users', 'role_id')) {
                 $table->foreignId('role_id')->nullable()->after('id')->constrained('roles')->onDelete('cascade');
             }
         });

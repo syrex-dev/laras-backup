@@ -12,6 +12,10 @@ use App\Http\Controllers\Operations\RecycleBinController;
 use App\Http\Controllers\Organization\OrganizationProfileController;
 use App\Http\Controllers\Organization\TandaTanganController;
 use App\Http\Controllers\Organization\UserController;
+use App\Models\Disposisi;
+use App\Models\KlasifikasiSurat;
+use App\Models\SuratKeluar;
+use App\Models\SuratMasuk;
 use Illuminate\Support\Facades\Route;
 
 // -----------------------------------------------------------------------
@@ -41,11 +45,12 @@ Route::middleware(['auth'])->group(function () {
     // Dashboard
     Route::get('/dashboard', function () {
         $stats = [
-            'surat_masuk'  => \App\Models\SuratMasuk::count(),
-            'surat_keluar' => \App\Models\SuratKeluar::count(),
-            'disposisi'    => \App\Models\Disposisi::count(),
-            'klasifikasi'  => \App\Models\KlasifikasiSurat::count(),
+            'surat_masuk' => SuratMasuk::count(),
+            'surat_keluar' => SuratKeluar::count(),
+            'disposisi' => Disposisi::count(),
+            'klasifikasi' => KlasifikasiSurat::count(),
         ];
+
         return view('dashboard', compact('stats'));
     })->name('dashboard');
 
@@ -124,6 +129,7 @@ Route::middleware(['auth'])->group(function () {
 
 // Public Verification Route
 Route::get('/verify/{token}', function ($token) {
-    $surat = \App\Models\SuratKeluar::where('qr_token', $token)->firstOrFail();
+    $surat = SuratKeluar::where('qr_token', $token)->firstOrFail();
+
     return view('public.verify', compact('surat'));
 })->name('public.verify');

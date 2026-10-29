@@ -18,15 +18,15 @@ class CreateSuratKeluarAction
     public function execute(array $data, int $userId): SuratKeluar
     {
         $surat = SuratKeluar::create([
-            'klasifikasi_id'   => $data['klasifikasi_id'],
-            'penyetuju_id'     => $data['penyetuju_id'],
-            'tanggal_surat'    => $data['tanggal_surat'],
-            'tujuan'           => $data['tujuan'],
-            'perihal'          => $data['perihal'],
-            'lampiran'         => $data['lampiran'] ?? null,
-            'isi'              => $data['isi'] ?? null,
-            'status_approval'  => SuratKeluarStatus::DRAFT,
-            'user_id'          => $userId,
+            'klasifikasi_id' => $data['klasifikasi_id'],
+            'penyetuju_id' => $data['penyetuju_id'],
+            'tanggal_surat' => $data['tanggal_surat'],
+            'tujuan' => $data['tujuan'],
+            'perihal' => $data['perihal'],
+            'lampiran' => $data['lampiran'] ?? null,
+            'isi' => $data['isi'] ?? null,
+            'status_approval' => SuratKeluarStatus::DRAFT,
+            'user_id' => $userId,
             'templat_surat_id' => $data['templat_surat_id'],
         ]);
 

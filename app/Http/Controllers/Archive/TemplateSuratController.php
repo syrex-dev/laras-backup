@@ -18,6 +18,7 @@ class TemplateSuratController extends Controller
     public function index()
     {
         $templates = TemplatSurat::query()->latest()->paginate(10);
+
         return view('archive.template-surat.index', compact('templates'));
     }
 
@@ -40,6 +41,7 @@ class TemplateSuratController extends Controller
         if ($templateSurat->path_file && Storage::disk('public')->exists($templateSurat->path_file)) {
             $htmlContent = Storage::disk('public')->get($templateSurat->path_file);
         }
+
         return view('archive.template-surat.show', compact('templateSurat', 'htmlContent'));
     }
 
@@ -49,6 +51,7 @@ class TemplateSuratController extends Controller
         if ($templateSurat->path_file && Storage::disk('public')->exists($templateSurat->path_file)) {
             $htmlContent = Storage::disk('public')->get($templateSurat->path_file);
         }
+
         return view('archive.template-surat.edit', compact('templateSurat', 'htmlContent'));
     }
 

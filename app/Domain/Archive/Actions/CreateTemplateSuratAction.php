@@ -16,17 +16,17 @@ class CreateTemplateSuratAction
         $filePath = null;
 
         if ($data['tipe_input'] === 'upload' && $file) {
-            $fileName = time() . '_' . str_replace(' ', '_', $file->getClientOriginalName());
+            $fileName = time().'_'.str_replace(' ', '_', $file->getClientOriginalName());
             $filePath = $file->storeAs('templates', $fileName, 'public');
         } elseif ($data['tipe_input'] === 'textarea') {
-            $fileName = time() . '_' . str_replace(' ', '_', $data['nama_templat']) . '.html';
-            $filePath = 'templates/' . $fileName;
+            $fileName = time().'_'.str_replace(' ', '_', $data['nama_templat']).'.html';
+            $filePath = 'templates/'.$fileName;
             Storage::disk('public')->put($filePath, $data['konten_html']);
         }
 
         $template = TemplatSurat::create([
             'nama_templat' => $data['nama_templat'],
-            'path_file'    => $filePath,
+            'path_file' => $filePath,
         ]);
 
         $this->logActivity('created', 'templat_surat', $template->id);

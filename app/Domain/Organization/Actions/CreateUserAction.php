@@ -11,10 +11,10 @@ class CreateUserAction
     public function execute(array $data): User
     {
         $user = User::create([
-            'nama'     => $data['nama'],
-            'email'    => $data['email'],
+            'nama' => $data['nama'],
+            'email' => $data['email'],
             'password' => Hash::make($data['password']),
-            'role_id'  => $data['role_id'],
+            'role_id' => $data['role_id'],
         ]);
 
         $role = Role::find($data['role_id']);

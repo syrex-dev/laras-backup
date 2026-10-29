@@ -10,15 +10,15 @@ class UpdateOrganizationProfileAction
 {
     public function execute(array $data, ?UploadedFile $logo, ?UploadedFile $stempel): ProfilOrganisasi
     {
-        $profile = ProfilOrganisasi::first() ?: new ProfilOrganisasi();
+        $profile = ProfilOrganisasi::first() ?: new ProfilOrganisasi;
 
         $updateData = [
-            'nama_instansi'   => $data['nama_instansi'],
+            'nama_instansi' => $data['nama_instansi'],
             'kode_organisasi' => $data['kode_organisasi'],
-            'alamat'          => $data['alamat'],
-            'email'           => $data['email'],
-            'telepon'         => $data['telepon'],
-            'tema_default'    => $data['tema_default'] ?? 'light',
+            'alamat' => $data['alamat'],
+            'email' => $data['email'],
+            'telepon' => $data['telepon'],
+            'tema_default' => $data['tema_default'] ?? 'light',
         ];
 
         if ($logo) {

@@ -14,7 +14,7 @@ return new class extends Migration
     {
         Schema::table('surat_keluar', function (Blueprint $table) {
             $table->string('lampiran')->nullable()->after('perihal')
-                  ->comment('Keterangan lampiran surat, misal: 1 berkas, Terlampir, -');
+                ->comment('Keterangan lampiran surat, misal: 1 berkas, Terlampir, -');
         });
     }
 

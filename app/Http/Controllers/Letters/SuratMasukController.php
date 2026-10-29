@@ -65,6 +65,7 @@ class SuratMasukController extends Controller
     public function show(SuratMasuk $suratMasuk)
     {
         $suratMasuk->load(['user', 'disposisi.pengirim', 'disposisi.penerima']);
+
         return view('letters.surat-masuk.show', compact('suratMasuk'));
     }
 

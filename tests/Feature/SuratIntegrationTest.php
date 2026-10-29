@@ -7,6 +7,7 @@ use App\Models\ProfilOrganisasi;
 use App\Models\SuratKeluar;
 use App\Models\TemplatSurat;
 use App\Models\User;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -30,7 +31,7 @@ class SuratIntegrationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class);
+        $this->withoutMiddleware(ValidateCsrfToken::class);
     }
 
     // -----------------------------------------------------------------
@@ -44,7 +45,7 @@ class SuratIntegrationTest extends TestCase
     {
         foreach (['Admin', 'Sekretaris', 'Pimpinan', 'Staf'] as $roleName) {
             Role::firstOrCreate([
-                'name'       => $roleName,
+                'name' => $roleName,
                 'guard_name' => 'web',
             ]);
         }
@@ -60,7 +61,7 @@ class SuratIntegrationTest extends TestCase
         $user = User::query()->firstOrCreate(
             ['email' => $email],
             [
-                'nama'     => $nama,
+                'nama' => $nama,
                 'password' => Hash::make('password'),
             ]
         );
@@ -78,21 +79,21 @@ class SuratIntegrationTest extends TestCase
     {
         $klasifikasi = KlasifikasiSurat::create([
             'kode_klasifikasi' => 'INT',
-            'nama'             => 'Integration Test',
-            'keterangan'       => 'Klasifikasi untuk integration test',
+            'nama' => 'Integration Test',
+            'keterangan' => 'Klasifikasi untuk integration test',
         ]);
 
         $template = TemplatSurat::create([
             'nama_templat' => 'Template Integration Test',
-            'path_file'    => 'templates/integration-test.html',
+            'path_file' => 'templates/integration-test.html',
         ]);
 
         ProfilOrganisasi::create([
-            'nama_instansi'   => 'HIMASE Test',
+            'nama_instansi' => 'HIMASE Test',
             'kode_organisasi' => 'HIMA-TEST',
-            'alamat'          => 'Jl. Test No. 1',
-            'email'           => 'test@himase.ac.id',
-            'telepon'         => '081200000000',
+            'alamat' => 'Jl. Test No. 1',
+            'email' => 'test@himase.ac.id',
+            'telepon' => '081200000000',
         ]);
 
         return compact('klasifikasi', 'template');
@@ -110,17 +111,17 @@ class SuratIntegrationTest extends TestCase
     {
         // Arrange
         $sekretaris = $this->createUser('Sekretaris', 'sekretaris.int@example.com', 'Sekretaris Integration');
-        $pimpinan   = $this->createUser('Pimpinan', 'pimpinan.int@example.com', 'Pimpinan Integration');
-        $support    = $this->seedSupportingData();
+        $pimpinan = $this->createUser('Pimpinan', 'pimpinan.int@example.com', 'Pimpinan Integration');
+        $support = $this->seedSupportingData();
 
         $payload = [
-            '_token'           => csrf_token(),
-            'klasifikasi_id'   => $support['klasifikasi']->id,
-            'penyetuju_id'     => $pimpinan->id,
-            'tanggal_surat'    => now()->format('Y-m-d'),
-            'tujuan'           => 'Dekan Fakultas Teknik',
-            'perihal'          => 'Undangan Rapat Koordinasi HIMASE',
-            'isi'              => 'Dengan hormat, kami mengundang Bapak/Ibu untuk menghadiri rapat koordinasi.',
+            '_token' => csrf_token(),
+            'klasifikasi_id' => $support['klasifikasi']->id,
+            'penyetuju_id' => $pimpinan->id,
+            'tanggal_surat' => now()->format('Y-m-d'),
+            'tujuan' => 'Dekan Fakultas Teknik',
+            'perihal' => 'Undangan Rapat Koordinasi HIMASE',
+            'isi' => 'Dengan hormat, kami mengundang Bapak/Ibu untuk menghadiri rapat koordinasi.',
             'templat_surat_id' => $support['template']->id,
         ];
 
@@ -134,11 +135,11 @@ class SuratIntegrationTest extends TestCase
 
         // Assert – data tersimpan di database
         $this->assertDatabaseHas('surat_keluar', [
-            'tujuan'           => 'Dekan Fakultas Teknik',
-            'perihal'          => 'Undangan Rapat Koordinasi HIMASE',
-            'status_approval'  => 'draft',
-            'user_id'          => $sekretaris->id,
-            'penyetuju_id'     => $pimpinan->id,
+            'tujuan' => 'Dekan Fakultas Teknik',
+            'perihal' => 'Undangan Rapat Koordinasi HIMASE',
+            'status_approval' => 'draft',
+            'user_id' => $sekretaris->id,
+            'penyetuju_id' => $pimpinan->id,
             'templat_surat_id' => $support['template']->id,
         ]);
 
@@ -159,20 +160,20 @@ class SuratIntegrationTest extends TestCase
         Storage::fake('public');
 
         $sekretaris = $this->createUser('Sekretaris', 'sekretaris.approve@example.com', 'Sekretaris Approve');
-        $pimpinan   = $this->createUser('Pimpinan', 'pimpinan.approve@example.com', 'Pimpinan Approve');
-        $support    = $this->seedSupportingData();
+        $pimpinan = $this->createUser('Pimpinan', 'pimpinan.approve@example.com', 'Pimpinan Approve');
+        $support = $this->seedSupportingData();
 
         // Buat draft terlebih dahulu (simulasi output dari Sekretaris)
         $draft = SuratKeluar::create([
-            'nomor_surat'      => '001/INT/HIMA-TEST/X/2026',
-            'klasifikasi_id'   => $support['klasifikasi']->id,
-            'tanggal_surat'    => now()->subDay(),
-            'tujuan'           => 'Kepala Lab',
-            'perihal'          => 'Pengajuan Peminjaman Lab',
-            'isi'              => 'Isi surat untuk keperluan approve test.',
-            'status_approval'  => 'draft',
-            'user_id'          => $sekretaris->id,
-            'penyetuju_id'     => $pimpinan->id,
+            'nomor_surat' => '001/INT/HIMA-TEST/X/2026',
+            'klasifikasi_id' => $support['klasifikasi']->id,
+            'tanggal_surat' => now()->subDay(),
+            'tujuan' => 'Kepala Lab',
+            'perihal' => 'Pengajuan Peminjaman Lab',
+            'isi' => 'Isi surat untuk keperluan approve test.',
+            'status_approval' => 'draft',
+            'user_id' => $sekretaris->id,
+            'penyetuju_id' => $pimpinan->id,
             'templat_surat_id' => $support['template']->id,
         ]);
 
@@ -180,7 +181,7 @@ class SuratIntegrationTest extends TestCase
 
         // Act – Pimpinan approve
         $response = $this->actingAs($pimpinan)
-            ->patch('/surat-keluar/' . $draft->id . '/approve', [
+            ->patch('/surat-keluar/'.$draft->id.'/approve', [
                 '_token' => csrf_token(),
             ]);
 
@@ -209,25 +210,25 @@ class SuratIntegrationTest extends TestCase
     {
         // Arrange
         $sekretaris = $this->createUser('Sekretaris', 'sekretaris.reject@example.com', 'Sekretaris Reject');
-        $pimpinan   = $this->createUser('Pimpinan', 'pimpinan.reject@example.com', 'Pimpinan Reject');
-        $support    = $this->seedSupportingData();
+        $pimpinan = $this->createUser('Pimpinan', 'pimpinan.reject@example.com', 'Pimpinan Reject');
+        $support = $this->seedSupportingData();
 
         $draft = SuratKeluar::create([
-            'nomor_surat'      => '002/INT/HIMA-TEST/X/2026',
-            'klasifikasi_id'   => $support['klasifikasi']->id,
-            'tanggal_surat'    => now()->subDays(2),
-            'tujuan'           => 'Wakil Rektor',
-            'perihal'          => 'Surat yang Akan Ditolak',
-            'isi'              => 'Isi surat ini sengaja untuk pengujian reject.',
-            'status_approval'  => 'draft',
-            'user_id'          => $sekretaris->id,
-            'penyetuju_id'     => $pimpinan->id,
+            'nomor_surat' => '002/INT/HIMA-TEST/X/2026',
+            'klasifikasi_id' => $support['klasifikasi']->id,
+            'tanggal_surat' => now()->subDays(2),
+            'tujuan' => 'Wakil Rektor',
+            'perihal' => 'Surat yang Akan Ditolak',
+            'isi' => 'Isi surat ini sengaja untuk pengujian reject.',
+            'status_approval' => 'draft',
+            'user_id' => $sekretaris->id,
+            'penyetuju_id' => $pimpinan->id,
             'templat_surat_id' => $support['template']->id,
         ]);
 
         // Act – Pimpinan reject
         $response = $this->actingAs($pimpinan)
-            ->patch('/surat-keluar/' . $draft->id . '/reject', [
+            ->patch('/surat-keluar/'.$draft->id.'/reject', [
                 '_token' => csrf_token(),
             ]);
 
@@ -249,20 +250,20 @@ class SuratIntegrationTest extends TestCase
     public function test_staf_cannot_store_surat_keluar(): void
     {
         // Arrange
-        $staf      = $this->createUser('Staf', 'staf.int@example.com', 'Staf Integration');
-        $pimpinan  = $this->createUser('Pimpinan', 'pimpinan.rbac@example.com', 'Pimpinan RBAC');
-        $support   = $this->seedSupportingData();
+        $staf = $this->createUser('Staf', 'staf.int@example.com', 'Staf Integration');
+        $pimpinan = $this->createUser('Pimpinan', 'pimpinan.rbac@example.com', 'Pimpinan RBAC');
+        $support = $this->seedSupportingData();
 
         // Act – Staf mencoba POST store surat keluar
         $response = $this->actingAs($staf)
             ->post('/surat-keluar', [
-                '_token'           => csrf_token(),
-                'klasifikasi_id'   => $support['klasifikasi']->id,
-                'penyetuju_id'     => $pimpinan->id,
-                'tanggal_surat'    => now()->format('Y-m-d'),
-                'tujuan'           => 'Test RBAC',
-                'perihal'          => 'Staf seharusnya tidak bisa',
-                'isi'              => 'Test body',
+                '_token' => csrf_token(),
+                'klasifikasi_id' => $support['klasifikasi']->id,
+                'penyetuju_id' => $pimpinan->id,
+                'tanggal_surat' => now()->format('Y-m-d'),
+                'tujuan' => 'Test RBAC',
+                'perihal' => 'Staf seharusnya tidak bisa',
+                'isi' => 'Test body',
                 'templat_surat_id' => $support['template']->id,
             ]);
 
@@ -284,18 +285,18 @@ class SuratIntegrationTest extends TestCase
         Storage::fake('public');
 
         $sekretaris = $this->createUser('Sekretaris', 'sekretaris.e2e@example.com', 'Sekretaris E2E');
-        $pimpinan   = $this->createUser('Pimpinan', 'pimpinan.e2e@example.com', 'Pimpinan E2E');
-        $support    = $this->seedSupportingData();
+        $pimpinan = $this->createUser('Pimpinan', 'pimpinan.e2e@example.com', 'Pimpinan E2E');
+        $support = $this->seedSupportingData();
 
         // Step 1: Sekretaris membuat draft
         $createResponse = $this->actingAs($sekretaris)->post('/surat-keluar', [
-            '_token'           => csrf_token(),
-            'klasifikasi_id'   => $support['klasifikasi']->id,
-            'penyetuju_id'     => $pimpinan->id,
-            'tanggal_surat'    => now()->format('Y-m-d'),
-            'tujuan'           => 'Rektor Politeknik',
-            'perihal'          => 'E2E Integration Test',
-            'isi'              => 'End-to-end test: buat draft lalu approve.',
+            '_token' => csrf_token(),
+            'klasifikasi_id' => $support['klasifikasi']->id,
+            'penyetuju_id' => $pimpinan->id,
+            'tanggal_surat' => now()->format('Y-m-d'),
+            'tujuan' => 'Rektor Politeknik',
+            'perihal' => 'E2E Integration Test',
+            'isi' => 'End-to-end test: buat draft lalu approve.',
             'templat_surat_id' => $support['template']->id,
         ]);
 
@@ -306,7 +307,7 @@ class SuratIntegrationTest extends TestCase
 
         // Step 2: Pimpinan approve
         $approveResponse = $this->actingAs($pimpinan)
-            ->patch('/surat-keluar/' . $surat->id . '/approve', [
+            ->patch('/surat-keluar/'.$surat->id.'/approve', [
                 '_token' => csrf_token(),
             ]);
 

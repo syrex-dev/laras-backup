@@ -18,9 +18,9 @@ class UpdateKlasifikasiSuratRequest extends FormRequest
         $id = $param instanceof KlasifikasiSurat ? $param->id : $param;
 
         return [
-            'kode_klasifikasi' => 'required|string|max:50|unique:klasifikasi_surat,kode_klasifikasi,' . $id,
-            'nama'             => 'required|string|max:255',
-            'keterangan'       => 'nullable|string',
+            'kode_klasifikasi' => 'required|string|max:50|unique:klasifikasi_surat,kode_klasifikasi,'.$id,
+            'nama' => 'required|string|max:255',
+            'keterangan' => 'nullable|string',
         ];
     }
 }

@@ -16,12 +16,14 @@ class RecycleBinController extends Controller
         $trashedSuratMasuk = SuratMasuk::onlyTrashed()->get()->map(function ($item) {
             $item->type = 'surat-masuk';
             $item->display_type = 'Surat Masuk';
+
             return $item;
         });
 
         $trashedSuratKeluar = SuratKeluar::onlyTrashed()->get()->map(function ($item) {
             $item->type = 'surat-keluar';
             $item->display_type = 'Surat Keluar';
+
             return $item;
         });
 
@@ -37,8 +39,9 @@ class RecycleBinController extends Controller
 
             return redirect()->route('admin.recycle-bin.index')->with('success', "{$type} berhasil dikembalikan.");
         } catch (\Exception $e) {
-            Log::error("Restore Error ({$type}): " . $e->getMessage());
-            return redirect()->back()->with('error', "Gagal mengembalikan {$type}: " . $e->getMessage());
+            Log::error("Restore Error ({$type}): ".$e->getMessage());
+
+            return redirect()->back()->with('error', "Gagal mengembalikan {$type}: ".$e->getMessage());
         }
     }
 
@@ -49,8 +52,9 @@ class RecycleBinController extends Controller
 
             return redirect()->route('admin.recycle-bin.index')->with('success', "{$type} berhasil dihapus permanen.");
         } catch (\Exception $e) {
-            Log::error("Force Delete Error ({$type}): " . $e->getMessage());
-            return redirect()->back()->with('error', "Gagal menghapus permanen {$type}: " . $e->getMessage());
+            Log::error("Force Delete Error ({$type}): ".$e->getMessage());
+
+            return redirect()->back()->with('error', "Gagal menghapus permanen {$type}: ".$e->getMessage());
         }
     }
 }

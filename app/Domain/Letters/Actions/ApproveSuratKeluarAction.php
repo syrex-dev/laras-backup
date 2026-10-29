@@ -33,80 +33,80 @@ class ApproveSuratKeluarAction
 
         try {
             // STEP 1: Generate QR Token & QR Code image
-            $qrToken   = bin2hex(random_bytes(16));
+            $qrToken = bin2hex(random_bytes(16));
             $verifyUrl = route('public.verify', ['token' => $qrToken]);
             $qrCodeSvg = QrCode::format('svg')->size(200)->generate($verifyUrl);
-            $qrPath    = 'surat-keluar/qrcode-' . $suratKeluar->id . '.svg';
+            $qrPath = 'surat-keluar/qrcode-'.$suratKeluar->id.'.svg';
             Storage::disk('public')->put($qrPath, $qrCodeSvg);
 
             // STEP 2: Render layout PDF via DOMPDF → temporary file
             $suratKeluar->load(['user', 'klasifikasi', 'penyetuju.tandaTangan', 'templatSurat']);
 
-            $profil         = ProfilOrganisasi::first();
-            $template       = $suratKeluar->templatSurat;
+            $profil = ProfilOrganisasi::first();
+            $template = $suratKeluar->templatSurat;
             $kontenTemplate = '';
 
             if ($template && $template->path_file && Storage::disk('public')->exists($template->path_file)) {
                 $htmlContent = Storage::disk('public')->get($template->path_file);
 
-                $penyetujuName    = optional($suratKeluar->penyetuju)->nama ?? 'Ketua HIMASE';
-                $namaOrganisasi   = optional($profil)->nama_instansi ?? 'HIMASE';
+                $penyetujuName = optional($suratKeluar->penyetuju)->nama ?? 'Ketua HIMASE';
+                $namaOrganisasi = optional($profil)->nama_instansi ?? 'HIMASE';
                 $alamatOrganisasi = optional($profil)->alamat ?? 'Alamat Instansi';
-                $tanggalSurat     = $suratKeluar->tanggal_surat
+                $tanggalSurat = $suratKeluar->tanggal_surat
                     ? Carbon::parse($suratKeluar->tanggal_surat)->translatedFormat('d F Y')
                     : now()->translatedFormat('d F Y');
 
                 $kontenTemplate = $this->templateParser->parse($htmlContent, [
-                    'nomor_surat'       => $suratKeluar->nomor_surat ?? '-',
-                    'tanggal_surat'     => $tanggalSurat,
-                    'tujuan'            => $suratKeluar->tujuan ?? '-',
-                    'tujuan_surat'      => $suratKeluar->tujuan ?? '-',
-                    'perihal'           => $suratKeluar->perihal ?? '-',
-                    'lampiran'          => $suratKeluar->lampiran ?? '-',
-                    'isi'               => nl2br(e($suratKeluar->isi ?? '-')),
-                    'penyetuju'         => $penyetujuName,
-                    'nama_penyetuju'    => $penyetujuName,
-                    'nama_organisasi'   => $namaOrganisasi,
+                    'nomor_surat' => $suratKeluar->nomor_surat ?? '-',
+                    'tanggal_surat' => $tanggalSurat,
+                    'tujuan' => $suratKeluar->tujuan ?? '-',
+                    'tujuan_surat' => $suratKeluar->tujuan ?? '-',
+                    'perihal' => $suratKeluar->perihal ?? '-',
+                    'lampiran' => $suratKeluar->lampiran ?? '-',
+                    'isi' => nl2br(e($suratKeluar->isi ?? '-')),
+                    'penyetuju' => $penyetujuName,
+                    'nama_penyetuju' => $penyetujuName,
+                    'nama_organisasi' => $namaOrganisasi,
                     'alamat_organisasi' => $alamatOrganisasi,
                 ]);
             }
 
             $domPdf = Pdf::loadView('pdf.surat-keluar', [
-                'surat'          => $suratKeluar,
+                'surat' => $suratKeluar,
                 'kontenTemplate' => $kontenTemplate,
-                'qrCode'         => $qrCodeSvg,
-                'profil'         => $profil,
+                'qrCode' => $qrCodeSvg,
+                'profil' => $profil,
             ]);
             $domPdf->setPaper('A4', 'portrait');
 
-            $tempFileName = 'temp_unsigned_' . $suratKeluar->id . '_' . time() . '.pdf';
-            $tempPdfPath  = storage_path('app/' . $tempFileName);
+            $tempFileName = 'temp_unsigned_'.$suratKeluar->id.'_'.time().'.pdf';
+            $tempPdfPath = storage_path('app/'.$tempFileName);
             file_put_contents($tempPdfPath, $domPdf->output());
 
             // STEP 3: Hybrid Signing — TCPDF + FPDI + Sertifikat PKI
-            $signedFileName = 'surat-keluar/signed-' . $suratKeluar->id . '-' . time() . '.pdf';
-            $signedPdfPath  = storage_path('app/public/' . $signedFileName);
+            $signedFileName = 'surat-keluar/signed-'.$suratKeluar->id.'-'.time().'.pdf';
+            $signedPdfPath = storage_path('app/public/'.$signedFileName);
 
             $signedDir = dirname($signedPdfPath);
-            if (!is_dir($signedDir)) {
+            if (! is_dir($signedDir)) {
                 mkdir($signedDir, 0755, true);
             }
 
-            $signatureService = new DigitalSignatureService();
+            $signatureService = new DigitalSignatureService;
             $wasSigned = $signatureService->signOrCopy($tempPdfPath, $signedPdfPath, [
-                'name'     => optional($suratKeluar->penyetuju)->nama ?? 'Ketua HIMASE',
+                'name' => optional($suratKeluar->penyetuju)->nama ?? 'Ketua HIMASE',
                 'location' => 'Sumedang, Jawa Barat',
-                'reason'   => 'Pengesahan Digital Simpan.in — ' . $suratKeluar->nomor_surat,
-                'contact'  => optional($suratKeluar->penyetuju)->email ?? 'ketua@himase.ac.id',
+                'reason' => 'Pengesahan Digital Simpan.in — '.$suratKeluar->nomor_surat,
+                'contact' => optional($suratKeluar->penyetuju)->email ?? 'ketua@himase.ac.id',
             ]);
 
             // STEP 4: Update database
             $suratKeluar->update([
                 'status_approval' => SuratKeluarStatus::APPROVED,
-                'qr_token'        => $qrToken,
-                'path_qrcode'     => $qrPath,
-                'file_pdf'        => $signedFileName,
-                'penyetuju_id'    => $approverId,
+                'qr_token' => $qrToken,
+                'path_qrcode' => $qrPath,
+                'file_pdf' => $signedFileName,
+                'penyetuju_id' => $approverId,
             ]);
 
             $this->logActivity('approved', 'surat_keluar', $suratKeluar->id);
@@ -116,15 +116,15 @@ class ApproveSuratKeluarAction
                 : 'Surat berhasil disetujui dan QR Code dibuat. (Sertifikat digital belum dikonfigurasi — PDF tersimpan tanpa tanda tangan kriptografis.)';
 
             return [
-                'success'    => true,
-                'message'    => $message,
+                'success' => true,
+                'message' => $message,
                 'was_signed' => $wasSigned,
             ];
 
         } catch (\Exception $e) {
-            Log::error('Approval Error: ' . $e->getMessage(), [
+            Log::error('Approval Error: '.$e->getMessage(), [
                 'surat_id' => $suratKeluar->id,
-                'trace'    => $e->getTraceAsString(),
+                'trace' => $e->getTraceAsString(),
             ]);
             throw $e;
         } finally {

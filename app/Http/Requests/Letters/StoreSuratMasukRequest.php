@@ -14,12 +14,12 @@ class StoreSuratMasukRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'nomor_surat'   => 'required|string|max:100',
+            'nomor_surat' => 'required|string|max:100',
             'tanggal_surat' => 'required|date',
-            'pengirim'      => 'required|string|max:255',
-            'perihal'       => 'required|string|max:500',
-            'ringkasan'     => 'nullable|string',
-            'file_surat'    => 'nullable|file|mimes:pdf|max:10240',
+            'pengirim' => 'required|string|max:255',
+            'perihal' => 'required|string|max:500',
+            'ringkasan' => 'nullable|string',
+            'file_surat' => 'nullable|file|mimes:pdf|max:10240',
         ];
     }
 }

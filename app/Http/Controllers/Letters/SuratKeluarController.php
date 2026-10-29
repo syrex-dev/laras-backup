@@ -28,6 +28,7 @@ class SuratKeluarController extends Controller
     public function index()
     {
         $suratKeluar = SuratKeluar::query()->with(['user', 'klasifikasi'])->latest()->paginate(10);
+
         return view('letters.surat-keluar.index', compact('suratKeluar'));
     }
 
@@ -35,13 +36,13 @@ class SuratKeluarController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
-        if (!$user->hasRole('Sekretaris')) {
+        if (! $user->hasRole('Sekretaris')) {
             abort(403, 'Akses Ditolak: Hanya Sekretaris yang dapat membuat draft surat keluar.');
         }
 
         $klasifikasi = KlasifikasiSurat::all();
-        $pimpinan    = User::role('Pimpinan')->get();
-        $templates   = TemplatSurat::all();
+        $pimpinan = User::role('Pimpinan')->get();
+        $templates = TemplatSurat::all();
 
         return view('letters.surat-keluar.create', compact('klasifikasi', 'pimpinan', 'templates'));
     }
@@ -57,6 +58,7 @@ class SuratKeluarController extends Controller
     public function show(SuratKeluar $suratKeluar)
     {
         $suratKeluar->load(['user', 'klasifikasi', 'penyetuju']);
+
         return view('letters.surat-keluar.show', compact('suratKeluar'));
     }
 
@@ -64,13 +66,13 @@ class SuratKeluarController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
-        if (!$user->hasRole('Sekretaris')) {
+        if (! $user->hasRole('Sekretaris')) {
             abort(403, 'Akses Ditolak: Hanya Sekretaris yang berhak mengedit surat keluar.');
         }
 
         $klasifikasi = KlasifikasiSurat::all();
-        $pimpinan    = User::role('Pimpinan')->get();
-        $templates   = TemplatSurat::all();
+        $pimpinan = User::role('Pimpinan')->get();
+        $templates = TemplatSurat::all();
 
         return view('letters.surat-keluar.edit', compact('suratKeluar', 'klasifikasi', 'pimpinan', 'templates'));
     }
@@ -95,7 +97,7 @@ class SuratKeluarController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
-        if (!$user->hasRole('Pimpinan')) {
+        if (! $user->hasRole('Pimpinan')) {
             abort(403, 'Akses Ditolak: Aksi pengesahan secara eksklusif hanya dapat dilakukan oleh Pimpinan.');
         }
 
@@ -105,7 +107,7 @@ class SuratKeluarController extends Controller
             return redirect()->route('surat-keluar.show', $suratKeluar)
                 ->with('success', $result['message']);
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Gagal menyetujui surat: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Gagal menyetujui surat: '.$e->getMessage());
         }
     }
 
@@ -113,7 +115,7 @@ class SuratKeluarController extends Controller
     {
         /** @var User $user */
         $user = Auth::user();
-        if (!$user->hasRole('Pimpinan')) {
+        if (! $user->hasRole('Pimpinan')) {
             abort(403, 'Akses Ditolak: Aksi penolakan secara eksklusif hanya dapat dilakukan oleh Pimpinan.');
         }
 
@@ -128,10 +130,11 @@ class SuratKeluarController extends Controller
         try {
             return $previewAction->execute($request->all());
         } catch (\Exception $e) {
-            Log::error('Preview Error: ' . $e->getMessage());
+            Log::error('Preview Error: '.$e->getMessage());
+
             return response(
-                '<!DOCTYPE html><html><body style="font-family:sans-serif;padding:24px;color:#b91c1c;background:#fef2f2;">' .
-                '<h3>Gagal Menampilkan Pratinjau</h3><p>' . e($e->getMessage()) . '</p></body></html>',
+                '<!DOCTYPE html><html><body style="font-family:sans-serif;padding:24px;color:#b91c1c;background:#fef2f2;">'.
+                '<h3>Gagal Menampilkan Pratinjau</h3><p>'.e($e->getMessage()).'</p></body></html>',
                 422,
                 ['Content-Type' => 'text/html']
             );
@@ -142,7 +145,7 @@ class SuratKeluarController extends Controller
     {
         try {
             $template = $suratKeluar->templatSurat;
-            if (!$template || !$template->path_file || !Storage::disk('public')->exists($template->path_file)) {
+            if (! $template || ! $template->path_file || ! Storage::disk('public')->exists($template->path_file)) {
                 throw new \Exception('Berkas template surat tidak ditemukan.');
             }
 
@@ -163,43 +166,44 @@ class SuratKeluarController extends Controller
             $alamatOrganisasi = $profil->alamat ?? 'Alamat Instansi';
 
             $kontenTemplate = $templateParser->parse($htmlContent, [
-                'nomor_surat'       => $nomorSurat,
-                'tanggal_surat'     => $tanggalSurat,
-                'tujuan'            => $tujuan,
-                'tujuan_surat'      => $tujuan,
-                'perihal'           => $perihal,
-                'lampiran'          => $suratKeluar->lampiran ?? '-',
-                'isi'               => $isi,
-                'penyetuju'         => $penyetujuName,
-                'nama_penyetuju'    => $penyetujuName,
-                'nama_organisasi'   => $namaOrganisasi,
+                'nomor_surat' => $nomorSurat,
+                'tanggal_surat' => $tanggalSurat,
+                'tujuan' => $tujuan,
+                'tujuan_surat' => $tujuan,
+                'perihal' => $perihal,
+                'lampiran' => $suratKeluar->lampiran ?? '-',
+                'isi' => $isi,
+                'penyetuju' => $penyetujuName,
+                'nama_penyetuju' => $penyetujuName,
+                'nama_organisasi' => $namaOrganisasi,
                 'alamat_organisasi' => $alamatOrganisasi,
             ]);
 
             $qrCodeRaw = null;
             if ($suratKeluar->status_approval === 'approved' && $suratKeluar->path_qrcode) {
-                $qrPath = storage_path('app/public/' . $suratKeluar->path_qrcode);
+                $qrPath = storage_path('app/public/'.$suratKeluar->path_qrcode);
                 if (file_exists($qrPath)) {
                     $qrCodeRaw = file_get_contents($qrPath);
                 }
             }
 
             $pdf = Pdf::loadView('pdf.surat-keluar', [
-                'surat'          => $suratKeluar,
+                'surat' => $suratKeluar,
                 'kontenTemplate' => $kontenTemplate,
-                'qrCode'         => $qrCodeRaw,
-                'profil'         => $profil,
+                'qrCode' => $qrCodeRaw,
+                'profil' => $profil,
             ]);
             $pdf->setPaper('A4', 'portrait');
 
             return response($pdf->output(), 200, [
-                'Content-Type'        => 'application/pdf',
-                'Content-Disposition' => 'inline; filename="' . ($suratKeluar->status_approval === 'approved' ? 'surat-keluar' : 'preview_draft') . '.pdf"',
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="'.($suratKeluar->status_approval === 'approved' ? 'surat-keluar' : 'preview_draft').'.pdf"',
             ]);
 
         } catch (\Exception $e) {
-            Log::error('PDF Preview Draft Exception: ' . $e->getMessage());
-            return response('Error memproses pratinjau PDF: ' . $e->getMessage(), 500);
+            Log::error('PDF Preview Draft Exception: '.$e->getMessage());
+
+            return response('Error memproses pratinjau PDF: '.$e->getMessage(), 500);
         }
     }
 }

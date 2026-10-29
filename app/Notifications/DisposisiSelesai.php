@@ -4,7 +4,6 @@ namespace App\Notifications;
 
 use App\Models\Disposisi;
 use Illuminate\Bus\Queueable;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 class DisposisiSelesai extends Notification
@@ -27,7 +26,7 @@ class DisposisiSelesai extends Notification
     {
         return [
             'disposisi_id' => $this->disposisi->id,
-            'message' => 'Disposisi untuk surat ' . $this->disposisi->suratMasuk->nomor_surat . ' telah diselesaikan oleh ' . $this->disposisi->penerima->nama,
+            'message' => 'Disposisi untuk surat '.$this->disposisi->suratMasuk->nomor_surat.' telah diselesaikan oleh '.$this->disposisi->penerima->nama,
             'url' => route('disposisi.show', $this->disposisi->id),
         ];
     }

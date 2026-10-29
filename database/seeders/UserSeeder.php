@@ -22,7 +22,7 @@ class UserSeeder extends Seeder
 
         foreach ($roles as $roleName) {
             Role::firstOrCreate([
-                'name'       => $roleName,
+                'name' => $roleName,
                 'guard_name' => 'web',
             ]);
         }
@@ -32,24 +32,24 @@ class UserSeeder extends Seeder
         // ---------------------------------------------------------------
         $users = [
             [
-                'nama'  => 'Admin Simpan.in',
+                'nama' => 'Admin Simpan.in',
                 'email' => 'admin@himase.ac.id',
-                'role'  => 'Admin',
+                'role' => 'Admin',
             ],
             [
-                'nama'  => 'Nazwa Putri K',
+                'nama' => 'Nazwa Putri K',
                 'email' => 'sekretaris@himase.ac.id',
-                'role'  => 'Sekretaris',
+                'role' => 'Sekretaris',
             ],
             [
-                'nama'  => 'Dede Rizki P',
+                'nama' => 'Dede Rizki P',
                 'email' => 'ketua@himase.ac.id',
-                'role'  => 'Pimpinan',
+                'role' => 'Pimpinan',
             ],
             [
-                'nama'  => 'Ilham Jamaludin',
+                'nama' => 'Ilham Jamaludin',
                 'email' => 'staf@himase.ac.id',
-                'role'  => 'Staf',
+                'role' => 'Staf',
             ],
         ];
 
@@ -57,8 +57,8 @@ class UserSeeder extends Seeder
             $user = User::firstOrCreate(
                 ['email' => $userData['email']],
                 [
-                    'nama'     => $userData['nama'],
-                    'email'    => $userData['email'],
+                    'nama' => $userData['nama'],
+                    'email' => $userData['email'],
                     'password' => Hash::make('password'),
                 ]
             );

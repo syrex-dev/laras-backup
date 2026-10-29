@@ -11,7 +11,8 @@ class OrganizationProfileController extends Controller
 {
     public function index()
     {
-        $profile = ProfilOrganisasi::first() ?: new ProfilOrganisasi();
+        $profile = ProfilOrganisasi::first() ?: new ProfilOrganisasi;
+
         return view('organization.profile.index', compact('profile'));
     }
 

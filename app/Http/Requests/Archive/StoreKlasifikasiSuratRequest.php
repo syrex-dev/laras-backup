@@ -15,8 +15,8 @@ class StoreKlasifikasiSuratRequest extends FormRequest
     {
         return [
             'kode_klasifikasi' => 'required|string|max:50|unique:klasifikasi_surat',
-            'nama'             => 'required|string|max:255',
-            'keterangan'       => 'nullable|string',
+            'nama' => 'required|string|max:255',
+            'keterangan' => 'nullable|string',
         ];
     }
 }

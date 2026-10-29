@@ -33,11 +33,12 @@ class ModularViewRoutingTest extends TestCase
     {
         $user = User::query()->create([
             'nama' => "User {$role}",
-            'email' => strtolower($role) . '@example.com',
+            'email' => strtolower($role).'@example.com',
             'password' => Hash::make('password'),
         ]);
 
         $user->assignRole($role);
+
         return $user;
     }
 

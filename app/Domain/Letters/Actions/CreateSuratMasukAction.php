@@ -14,19 +14,19 @@ class CreateSuratMasukAction
     {
         $filePath = null;
         if ($file) {
-            $fileName = time() . '_' . $file->getClientOriginalName();
+            $fileName = time().'_'.$file->getClientOriginalName();
             $filePath = $file->storeAs('surat-masuk', $fileName, 'public');
         }
 
         $suratMasuk = SuratMasuk::create([
-            'nomor_surat'         => $data['nomor_surat'],
-            'tanggal_surat'       => $data['tanggal_surat'],
-            'pengirim'            => $data['pengirim'],
-            'perihal'             => $data['perihal'],
-            'ringkasan'           => $data['ringkasan'] ?? null,
-            'file_path'           => $filePath,
+            'nomor_surat' => $data['nomor_surat'],
+            'tanggal_surat' => $data['tanggal_surat'],
+            'pengirim' => $data['pengirim'],
+            'perihal' => $data['perihal'],
+            'ringkasan' => $data['ringkasan'] ?? null,
+            'file_path' => $filePath,
             'status_ekstraksi_ai' => 'pending',
-            'user_id'             => $userId,
+            'user_id' => $userId,
         ]);
 
         $this->logActivity('created', 'surat_masuk', $suratMasuk->id);

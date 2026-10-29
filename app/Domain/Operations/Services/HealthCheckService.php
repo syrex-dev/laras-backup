@@ -24,13 +24,13 @@ class HealthCheckService
         $diskFreeGb = $diskFreeSpaceBytes ? round($diskFreeSpaceBytes / (1024 * 1024 * 1024), 2) : 0;
 
         return [
-            'status'            => $dbOk && $storageWritable ? 'healthy' : 'degraded',
-            'database'          => $dbOk ? 'connected' : 'error',
-            'storage_writable'  => $storageWritable,
-            'disk_free_gb'      => $diskFreeGb,
-            'app_version'       => '1.0.0',
-            'php_version'       => PHP_VERSION,
-            'timestamp'         => now()->toIso8601String(),
+            'status' => $dbOk && $storageWritable ? 'healthy' : 'degraded',
+            'database' => $dbOk ? 'connected' : 'error',
+            'storage_writable' => $storageWritable,
+            'disk_free_gb' => $diskFreeGb,
+            'app_version' => '1.0.0',
+            'php_version' => PHP_VERSION,
+            'timestamp' => now()->toIso8601String(),
         ];
     }
 }

@@ -14,11 +14,11 @@ class CreateDisposisiAction
     {
         $disposisi = Disposisi::create([
             'surat_masuk_id' => $data['surat_masuk_id'],
-            'pengirim_id'    => $senderId,
-            'penerima_id'    => $data['penerima_id'],
-            'instruksi'      => $data['instruksi'],
-            'prioritas'      => $data['prioritas'],
-            'status'         => DisposisiStatus::BELUM_DIBACA,
+            'pengirim_id' => $senderId,
+            'penerima_id' => $data['penerima_id'],
+            'instruksi' => $data['instruksi'],
+            'prioritas' => $data['prioritas'],
+            'status' => DisposisiStatus::BELUM_DIBACA,
         ]);
 
         $this->logActivity('created', 'disposisi', $disposisi->id);

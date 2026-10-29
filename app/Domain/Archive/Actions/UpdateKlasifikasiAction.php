@@ -10,8 +10,8 @@ class UpdateKlasifikasiAction
     {
         return $klasifikasiSurat->update([
             'kode_klasifikasi' => $data['kode_klasifikasi'],
-            'nama'             => $data['nama'],
-            'keterangan'       => $data['keterangan'] ?? null,
+            'nama' => $data['nama'],
+            'keterangan' => $data['keterangan'] ?? null,
         ]);
     }
 }

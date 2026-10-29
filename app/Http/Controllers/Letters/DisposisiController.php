@@ -11,6 +11,7 @@ use App\Http\Requests\Letters\UpdateDisposisiStatusRequest;
 use App\Models\Disposisi;
 use App\Models\SuratMasuk;
 use App\Models\User;
+use App\Notifications\DisposisiSelesai;
 use App\Traits\Loggable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -40,7 +41,8 @@ class DisposisiController extends Controller
     public function create()
     {
         $suratMasuk = SuratMasuk::all();
-        $users      = User::all();
+        $users = User::all();
+
         return view('letters.disposisi.create', compact('suratMasuk', 'users'));
     }
 
@@ -58,13 +60,13 @@ class DisposisiController extends Controller
         $user = Auth::user();
 
         $currentUserId = (int) $user->id;
-        $penerimaId    = (int) $disposisi->penerima_id;
-        $pengirimId    = (int) $disposisi->pengirim_id;
+        $penerimaId = (int) $disposisi->penerima_id;
+        $pengirimId = (int) $disposisi->pengirim_id;
 
-        $isAdmin    = $user->hasRole('Admin');
+        $isAdmin = $user->hasRole('Admin');
         $isPimpinan = $user->hasRole('Pimpinan');
 
-        if (!$isAdmin && !$isPimpinan && $currentUserId !== $penerimaId) {
+        if (! $isAdmin && ! $isPimpinan && $currentUserId !== $penerimaId) {
             abort(403, 'Unauthorized');
         }
 
@@ -94,12 +96,12 @@ class DisposisiController extends Controller
             $status = $request->validated()['status'];
             $data = ['status' => $status];
 
-            if ($status === 'selesai' && !$disposisi->selesai_pada) {
+            if ($status === 'selesai' && ! $disposisi->selesai_pada) {
                 $data['selesai_pada'] = now();
 
                 $pimpinan = $disposisi->pengirim;
                 if ($pimpinan) {
-                    $pimpinan->notify(new \App\Notifications\DisposisiSelesai($disposisi));
+                    $pimpinan->notify(new DisposisiSelesai($disposisi));
                 }
             }
 
@@ -108,8 +110,9 @@ class DisposisiController extends Controller
 
             return back()->with('success', 'Status disposisi berhasil diperbarui dan notifikasi telah dikirim.');
         } catch (\Exception $e) {
-            Log::error('Disposisi Status Error: ' . $e->getMessage());
-            return back()->with('error', 'Gagal memperbarui status: ' . $e->getMessage());
+            Log::error('Disposisi Status Error: '.$e->getMessage());
+
+            return back()->with('error', 'Gagal memperbarui status: '.$e->getMessage());
         }
     }
 

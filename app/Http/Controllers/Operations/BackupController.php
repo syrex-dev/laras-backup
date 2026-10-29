@@ -15,8 +15,9 @@ class BackupController extends Controller
 
             return redirect()->back()->with('success', 'Backup sistem berhasil dimulai di latar belakang.');
         } catch (\Exception $e) {
-            Log::error('Backup Error: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Terjadi kesalahan saat menjalankan backup: ' . $e->getMessage());
+            Log::error('Backup Error: '.$e->getMessage());
+
+            return redirect()->back()->with('error', 'Terjadi kesalahan saat menjalankan backup: '.$e->getMessage());
         }
     }
 }

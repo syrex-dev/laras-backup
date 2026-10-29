@@ -11,7 +11,7 @@ class UpdateDisposisiStatusAction
     {
         if ($disposisi->status === DisposisiStatus::BELUM_DIBACA) {
             return $disposisi->update([
-                'status'      => DisposisiStatus::SUDAH_DIBACA,
+                'status' => DisposisiStatus::SUDAH_DIBACA,
                 'dibaca_pada' => now(),
             ]);
         }
@@ -23,7 +23,7 @@ class UpdateDisposisiStatusAction
     {
         $data = ['status' => $status];
 
-        if ($status === DisposisiStatus::SUDAH_DIBACA && !$disposisi->dibaca_pada) {
+        if ($status === DisposisiStatus::SUDAH_DIBACA && ! $disposisi->dibaca_pada) {
             $data['dibaca_pada'] = now();
         }
 
