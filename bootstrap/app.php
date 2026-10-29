@@ -1,5 +1,6 @@
 <?php
 
+use App\Domain\Lisensi\Middlewares\EnforceLicenseReadOnly;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -17,11 +18,13 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
             HandleInertiaRequests::class,
+            EnforceLicenseReadOnly::class,
         ]);
         $middleware->alias([
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
+            'license.readonly' => EnforceLicenseReadOnly::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
