@@ -30,5 +30,13 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->respond(function ($response) {
+            if ($response->getStatusCode() === 419) {
+                return back()->with([
+                    'error' => 'Sesi Anda telah kedaluwarsa. Silakan coba masuk kembali.',
+                ]);
+            }
+
+            return $response;
+        });
     })->create();
