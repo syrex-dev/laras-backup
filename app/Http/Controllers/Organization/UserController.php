@@ -26,19 +26,7 @@ class UserController extends Controller
         $license = LicenseState::current();
         $activeUsersCount = User::where('is_active', true)->count();
 
-        if ($request->header('X-Inertia')) {
-            return Inertia::render('Organisasi/Pengguna', [
-                'users' => $users,
-                'positions' => $positions,
-                'roles' => $roles,
-                'quota' => [
-                    'active_count' => $activeUsersCount,
-                    'max_users' => $license->max_users,
-                ],
-            ]);
-        }
-
-        if ($request->wantsJson()) {
+        if ($request->wantsJson() && ! $request->header('X-Inertia')) {
             return response()->json([
                 'users' => $users,
                 'quota' => [
@@ -48,7 +36,15 @@ class UserController extends Controller
             ]);
         }
 
-        return view('organization.users.index', compact('users', 'positions', 'roles'));
+        return Inertia::render('Organisasi/Pengguna', [
+            'users' => $users,
+            'positions' => $positions,
+            'roles' => $roles,
+            'quota' => [
+                'active_count' => $activeUsersCount,
+                'max_users' => $license->max_users,
+            ],
+        ]);
     }
 
     public function create()
