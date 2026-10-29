@@ -11,27 +11,27 @@ class SuratMasukPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->can('surat-masuk.lihat');
+        return $user->hasAnyRole(['Admin Instansi', 'Admin', 'Sekretaris', 'Staf TU']) || $user->can('surat-masuk.lihat');
     }
 
     public function view(User $user, $suratMasuk = null): bool
     {
-        return $user->can('surat-masuk.lihat');
+        return $user->hasAnyRole(['Admin Instansi', 'Admin', 'Sekretaris', 'Staf TU']) || $user->can('surat-masuk.lihat');
     }
 
     public function create(User $user): bool
     {
-        return $user->can('surat-masuk.registrasi');
+        return $user->hasAnyRole(['Admin Instansi', 'Admin', 'Sekretaris', 'Staf TU']) || $user->can('surat-masuk.registrasi');
     }
 
     public function update(User $user, $suratMasuk = null): bool
     {
-        return $user->can('surat-masuk.ubah');
+        return $user->hasAnyRole(['Admin Instansi', 'Admin', 'Sekretaris', 'Staf TU']) || $user->can('surat-masuk.ubah');
     }
 
     public function cancel(User $user, $suratMasuk = null): bool
     {
-        return $user->can('surat-masuk.batalkan');
+        return $user->hasAnyRole(['Admin Instansi', 'Admin', 'Sekretaris', 'Staf TU']) || $user->can('surat-masuk.batalkan');
     }
 
     public function delete(User $user, $suratMasuk = null): bool

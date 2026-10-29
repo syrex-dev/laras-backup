@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             ProfilOrganisasiSeeder::class,
             PoliteknikDemoSeeder::class,
+            SuratMasukDemoSeeder::class,
             SuratSeeder::class,
         ]);
     }

@@ -18,6 +18,16 @@ class KlasifikasiSurat extends Model
         'keterangan',
     ];
 
+    public function getKodeAttribute(): string
+    {
+        return $this->attributes['kode_klasifikasi'] ?? '';
+    }
+
+    public function setKodeAttribute($value): void
+    {
+        $this->attributes['kode_klasifikasi'] = $value;
+    }
+
     public function suratKeluar()
     {
         return $this->hasMany(SuratKeluar::class, 'klasifikasi_id');

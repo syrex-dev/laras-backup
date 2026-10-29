@@ -69,7 +69,12 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('klasifikasi-surat', KlasifikasiSuratController::class);
     });
 
-    // Surat Masuk (CRUD)
+    // Surat Masuk (CRUD & Aksi Terkait)
+    Route::post('/surat-masuk/{suratMasuk}/cancel', [SuratMasukController::class, 'cancel'])->name('surat-masuk.cancel');
+    Route::get('/surat-masuk/{suratMasuk}/attachments/{attachment}/download', [SuratMasukController::class, 'downloadAttachment'])->name('surat-masuk.attachment.download');
+    Route::get('/surat-masuk/{suratMasuk}/attachments/{attachment}/preview', [SuratMasukController::class, 'previewAttachment'])->name('surat-masuk.attachment.preview');
+    Route::get('/surat-masuk/{suratMasuk}/print-disposisi', [SuratMasukController::class, 'printLembarDisposisi'])->name('surat-masuk.print-disposisi');
+    Route::get('/surat-masuk/{suratMasuk}/print-bukti', [SuratMasukController::class, 'printBuktiTerima'])->name('surat-masuk.print-bukti');
     Route::resource('surat-masuk', SuratMasukController::class);
 
     // Surat Keluar
