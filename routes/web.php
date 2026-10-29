@@ -20,7 +20,9 @@ use App\Models\Disposisi;
 use App\Models\KlasifikasiSurat;
 use App\Models\SuratKeluar;
 use App\Models\SuratMasuk;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
 
 // -----------------------------------------------------------------------
 // Redirect root to login
@@ -53,7 +55,11 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Dashboard
-    Route::get('/dashboard', function () {
+    Route::get('/dashboard', function (Request $request) {
+        if ($request->header('X-Inertia')) {
+            return Inertia::location(route('dashboard'));
+        }
+
         $stats = [
             'surat_masuk' => SuratMasuk::count(),
             'surat_keluar' => SuratKeluar::count(),
