@@ -6,27 +6,64 @@ Dokumen ini mendokumentasikan skema basis data, Entity Relationship Diagram (ERD
 
 ## 1. Prinsip Utama Skema Basis Data
 
-1. **Tanpa `tenant_id`:** Basis data didedikasikan 100% untuk satu instansi. Tidak ada partisi tenant pada level tabel.
-2. **Performa Tinggi (< 2 Detik pada 100.000 Surat):**
-   * Semua foreign key diindeks.
+1. **Target Basis Data Tunggal: PostgreSQL:**
+   * Basis data utama yang digunakan adalah **PostgreSQL 15+**.
+   * Memanfaatkan tipe data bawaan `JSONB` untuk konfigurasi dinamis/kamus istilah, serta `tsvector` + GIN Index untuk pencarian full-text berkecepatan tinggi.
+   * Catatan fallback untuk lingkungan non-PostgreSQL (seperti MySQL untuk server alternatif) dicatat terpisah di `docs/OPEN_QUESTIONS.md`.
+2. **Tanpa `tenant_id`:** Basis data didedikasikan 100% untuk satu instansi. Tidak ada partisi tenant pada level tabel.
+3. **Pemisahan Peran (`roles`) vs Jabatan (`positions`):**
+   * **`roles` (Otorisasi Akses Sistem):** Menentukan hak teknis pengguna dalam aplikasi (misal: apa tombol yang bisa diklik, hak membuat surat, menyetujui, mengelola lisensi).
+   * **`positions` (Struktur Birokrasi & Wewenang Naskah):** Menentukan kedudukan pejabat dalam hierarki organisasi unit kerja (misal: Ketua Jurusan Elektro, Direktur). Menjadi dasar alur disposisi, rantai paraf, dan hak tanda tangan naskah dinas.
+4. **Performa Tinggi (< 2 Detik pada 100.000 Surat):**
+   * Semua foreign key memiliki indeks eksplisit.
    * Indeks komposit pada kombinasi status, tanggal, dan unit kerja untuk filter daftar surat.
-   * Dukungan full-text search (PostgreSQL `tsvector` + GIN Index, atau fallback MySQL `FULLTEXT`).
-3. **Pemberian Nomor Anti-Ganda:** Tabel `numbering_sequences` diproteksi menggunakan transaksi database dan *pessimistic row locking* (`SELECT ... FOR UPDATE`).
-4. **Append-Only Audit Log:** Tabel `activity_logs` tidak mengizinkan pembaruan (`UPDATE`) maupun penghapusan (`DELETE`).
-5. **Integritas Arsip:** Surat yang telah diterbitkan nomornya **tidak boleh dihapus fisik** (`hard delete`), melainkan hanya dapat diubah statusnya menjadi `dibatalkan` disertai alasan dan jejak audit.
+   * Indeks GIN pada kolom pencarian teks.
+5. **Pemberian Nomor Anti-Ganda:** Tabel `numbering_sequences` diproteksi menggunakan transaksi database dan *pessimistic row locking* (`SELECT ... FOR UPDATE`).
+6. **Append-Only Audit Log:** Tabel `activity_logs` tidak mengizinkan pembaruan (`UPDATE`) maupun penghapusan (`DELETE`) melalui trigger database PostgreSQL dan model event.
+7. **Integritas Arsip:** Surat yang telah diterbitkan nomornya **tidak boleh dihapus fisik** (`hard delete`), melainkan hanya dapat diubah statusnya menjadi `dibatalkan` disertai alasan dan jejak audit.
 
 ---
 
-## 2. Entity Relationship Diagram (Mermaid)
+## 2. Pemisahan Tanggung Jawab: `roles` vs `positions`
+
+Untuk menghindari kerancuan antara hak teknis aplikasi dan struktur birokrasi instansi, sistem memisahkan keduanya secara tegas:
+
+```
++---------------------------------------------------------------------------------------+
+| PENGGUNA (User: Dr. Ir. Budi, M.T.)                                                  |
++-------------------------------------------+-------------------------------------------+
+| ROLES (Spatie Permission)                 | POSITIONS (Struktur Organisasi)           |
+| -> Siapa yang mengoperasikan sistem?      | -> Apa jabatannya dalam tata naskah dinas? |
++-------------------------------------------+-------------------------------------------+
+| Role: "Pimpinan"                          | Position: "Ketua Jurusan Mesin"           |
+| Permissions:                              | Org Unit: "Jurusan Teknik Mesin" (JTM)    |
+| - disposisi.create                        | Wewenang Surat:                           |
+| - disposisi.forward                       | - Menerima disposisi untuk Jurusan Mesin  |
+| - surat_keluar.review                     | - Memaraf naskah dinas keluar dari JTM    |
+| - surat_keluar.sign                       | - Menandatangani surat tugas lingkup JTM  |
+|                                           | Delegasi: Dapat ditunjuk Plt saat cuti    |
++-------------------------------------------+-------------------------------------------+
+```
+
+* **Manfaat Pemisahan:**
+  1. Jika Ketua Jurusan cuti, pendelegasian jabatan (`position_delegations`) dapat dialihkan ke Sekretaris Jurusan sebagai Plt tanpa perlu mengubah role sistem akun tersebut.
+  2. Satu orang pejabat yang memegang dua posisi (misal Dosen dan Kaprodi) tetap memiliki akun dengan permissions yang bersih.
+
+---
+
+## 3. Entity Relationship Diagram (Mermaid)
 
 ```mermaid
 erDiagram
     INSTITUTION_PROFILE ||--o{ SYSTEM_SETTING : "memiliki"
     INSTITUTION_PROFILE ||--|| LICENSE_STATE : "diberi lisensi"
+    LICENSE_STATE ||--o{ QUOTA_USAGE : "mencatat pemakaian kuota"
     
     ORG_UNIT ||--o{ ORG_UNIT : "hierarki parent-child"
     ORG_UNIT ||--o{ POSITION : "memiliki"
-    POSITION ||--o{ USER : "ditugaskan ke"
+    POSITION ||--o{ USER : "menempati"
+    POSITION ||--o{ POSITION_DELEGATION : "didelegasikan/Plt"
+    USER ||--o{ POSITION_DELEGATION : "menerima tugas Plt"
     
     KLASIFIKASI_SURAT ||--o{ SURAT_MASUK : "mengelompokkan"
     KLASIFIKASI_SURAT ||--o{ SURAT_KELUAR : "mengelompokkan"
@@ -36,9 +73,9 @@ erDiagram
     SURAT_MASUK ||--o{ SURAT_MASUK_ATTACHMENT : "memiliki lampiran"
     SURAT_MASUK ||--o{ DISPOSISI : "menjadi dasar"
     
-    DISPOSISI ||--o{ DISPOSISI : "diteruskan berjenjang (parent-child)"
+    DISPOSISI ||--o{ DISPOSISI : "parent_disposisi_id (berjenjang)"
     DISPOSISI ||--o{ DISPOSISI_RECIPIENT : "ditujukan ke"
-    USER ||--o{ DISPOSISI_RECIPIENT : "menerima tindak lanjut"
+    USER ||--o{ DISPOSISI_RECIPIENT : "tindak lanjut"
     
     TEMPLATE_SURAT ||--o{ SURAT_KELUAR : "dasar draf"
     USER ||--o{ SURAT_KELUAR : "membuat draf"
@@ -46,389 +83,289 @@ erDiagram
     
     SURAT_KELUAR ||--o{ SURAT_KELUAR_APPROVAL : "alur paraf/persetujuan"
     SURAT_KELUAR ||--o{ SURAT_KELUAR_VERSION : "riwayat revisi draf"
+    SURAT_KELUAR ||--o{ SURAT_KELUAR_TEMBUSAN : "daftar tembusan"
     SURAT_KELUAR ||--o{ TANDA_TANGAN : "ditandatangani"
     
     ORG_UNIT ||--o{ NUMBERING_SEQUENCE : "mengelola urutan nomor"
-    
+    USER ||--o{ NOTIFICATION : "menerima pemberitahuan"
     USER ||--o{ ACTIVITY_LOG : "mencatat jejak audit"
 ```
 
 ---
 
-## 3. Spesifikasi Tabel Utama
+## 4. Spesifikasi Tabel Utama (PostgreSQL)
 
-### 3.1 Profil Instansi, Pengaturan & Lisensi
+### 4.1 Profil Instansi, Pengaturan, Lisensi & Pemantauan Kuota
 
 #### `institution_profiles`
-Menyimpan konfigurasi utama instansi (hanya 1 baris record aktif).
-| Kolom | Tipe Data | Keterangan |
+| Kolom | Tipe Data (PostgreSQL) | Keterangan |
 |---|---|---|
-| `id` | BIGINT PK | Identitas |
-| `name` | VARCHAR(255) | Nama instansi resmi (contoh: "Politeknik Negeri XYZ") |
-| `alias` | VARCHAR(50) | Singkatan instansi |
-| `address` | TEXT | Alamat lengkap kantor |
-| `email` | VARCHAR(100) | Email resmi tata usaha |
-| `phone` | VARCHAR(50) | Nomor kontak/telepon |
-| `website` | VARCHAR(100) | Alamat portal web |
-| `logo_path` | VARCHAR(255) | Path file logo instansi |
-| `header_image_path` | VARCHAR(255) | Path kop surat resmi |
-| `timezone` | VARCHAR(50) | Zona waktu (`Asia/Jakarta`, `Asia/Makassar`, `Asia/Jayapura`) |
-| `default_theme` | VARCHAR(50) | Tema warna UI instansi |
-| `terminology_dict` | JSONB / JSON | Kamus istilah dinamis (mis: `{"unit_level_1": "Jurusan", "lead_level_1": "Ketua Jurusan"}`) |
-| `created_at`, `updated_at` | TIMESTAMP | Waktu sistem |
+| `id` | BIGSERIAL PRIMARY KEY | Identitas |
+| `name` | VARCHAR(255) NOT NULL | Nama instansi resmi (contoh: "Politeknik Negeri Bandung") |
+| `alias` | VARCHAR(50) NOT NULL | Singkatan nama instansi (contoh: "POLBAN") |
+| `address` | TEXT NULL | Alamat kantor lengkap |
+| `email` | VARCHAR(100) NULL | Email resmi tata usaha |
+| `phone` | VARCHAR(50) NULL | Telepon / kontak |
+| `website` | VARCHAR(100) NULL | Portal resmi instansi |
+| `logo_path` | VARCHAR(255) NULL | Path file logo |
+| `header_image_path`| VARCHAR(255) NULL | Path kop surat naskah dinas |
+| `timezone` | VARCHAR(50) NOT NULL DEFAULT 'Asia/Jakarta' | Zona waktu (`Asia/Jakarta`, `Asia/Makassar`, `Asia/Jayapura`) |
+| `default_theme` | VARCHAR(50) NOT NULL DEFAULT 'emerald' | Warna tema antarmuka |
+| `terminology_dict` | JSONB NOT NULL DEFAULT '{}'::jsonb | Kamus istilah dinamis |
+| `created_at`, `updated_at` | TIMESTAMPTZ | Waktu sistem |
 
 #### `system_settings`
-Pengaturan fleksibel berbasis key-value.
 | Kolom | Tipe Data | Keterangan |
 |---|---|---|
-| `key` | VARCHAR(100) UNIQUE | Kunci konfigurasi (mis: `numbering_format_default`, `max_upload_size`) |
-| `value` | JSONB / TEXT | Nilai konfigurasi |
-| `created_at`, `updated_at` | TIMESTAMP | Waktu sistem |
+| `id` | BIGSERIAL PRIMARY KEY | Identitas |
+| `key` | VARCHAR(100) NOT NULL UNIQUE | Kunci konfigurasi |
+| `value` | JSONB NOT NULL | Nilai konfigurasi |
+| `created_at`, `updated_at` | TIMESTAMPTZ | Waktu sistem |
 
 #### `license_states`
-Status lisensi single-tenant dan kuota paket berlangganan.
 | Kolom | Tipe Data | Keterangan |
 |---|---|---|
-| `id` | BIGINT PK | Identitas |
-| `license_key` | VARCHAR(255) UNIQUE | Kunci lisensi terenkripsi |
-| `institution_slug` | VARCHAR(100) | Identitas instansi pada server vendor |
-| `plan` | VARCHAR(50) | Paket: `dasar`, `standar`, `lanjutan` |
-| `status` | VARCHAR(50) | Status: `active`, `grace_period`, `expired` |
-| `expires_at` | TIMESTAMP | Tanggal masa berlaku berakhir |
-| `grace_period_days` | INT | Masa toleransi setelah expired (default: 14 hari) |
-| `max_users` | INT | Batas pengguna aktif (kuota paket) |
-| `max_storage_mb` | INT | Batas kapasitas penyimpanan (MB) |
-| `active_features` | JSONB / JSON | Entitlement fitur (OCR, TTE, WhatsApp, SSO, API) |
-| `last_verified_at`| TIMESTAMP | Waktu terakhir validasi ke server vendor |
-| `signature_hash` | TEXT | Tanda tangan digital validasi lisensi offline/online |
-| `created_at`, `updated_at` | TIMESTAMP | Waktu sistem |
+| `id` | BIGSERIAL PRIMARY KEY | Identitas |
+| `license_key` | VARCHAR(255) NOT NULL UNIQUE | Kunci lisensi terenkripsi |
+| `institution_slug`| VARCHAR(100) NOT NULL | Identitas unik instansi |
+| `plan` | VARCHAR(50) NOT NULL DEFAULT 'standar' | `dasar`, `standar`, `lanjutan` |
+| `status` | VARCHAR(50) NOT NULL DEFAULT 'active' | `active`, `grace_period`, `expired` |
+| `expires_at` | TIMESTAMPTZ NOT NULL | Tanggal akhir masa berlaku |
+| `grace_period_days`| INT NOT NULL DEFAULT 14 | Masa tenggang setelah expired |
+| `max_users` | INT NOT NULL DEFAULT 100 | Batas kuota pengguna aktif |
+| `max_storage_bytes`| BIGINT NOT NULL DEFAULT 53687091200 | Batas kuota penyimpanan (bytes) |
+| `active_features` | JSONB NOT NULL DEFAULT '{}'::jsonb | Entitlement fitur (ocr, tte, whatsapp, sso, api) |
+| `last_verified_at`| TIMESTAMPTZ NOT NULL | Waktu verifikasi terakhir |
+| `signature_hash` | TEXT NOT NULL | Validasi hash tanda tangan lisensi |
+| `created_at`, `updated_at` | TIMESTAMPTZ | Waktu sistem |
+
+#### `quota_usages` (Pencatatan Pemakaian Storage & User)
+| Kolom | Tipe Data | Keterangan |
+|---|---|---|
+| `id` | BIGSERIAL PRIMARY KEY | Identitas |
+| `recorded_at` | TIMESTAMPTZ NOT NULL | Waktu snapshot kuota |
+| `active_users_count` | INT NOT NULL | Jumlah user aktif saat pencatatan |
+| `storage_used_bytes` | BIGINT NOT NULL | Total bytes file storage yang digunakan |
+| `files_count` | BIGINT NOT NULL | Total jumlah berkas yang tersimpan |
+| `details` | JSONB NULL | Rincian per modul (misal: storage surat masuk vs keluar) |
+| `created_at` | TIMESTAMPTZ NOT NULL DEFAULT NOW() | Waktu pencatatan |
 
 ---
 
-### 3.2 Struktur Organisasi & Pengguna
+### 4.2 Struktur Organisasi, Jabatan, Delegasi & Pengguna
 
 #### `org_units`
-Hierarki unit kerja (Instansi $\rightarrow$ Bagian/Jurusan $\rightarrow$ Subbagian/Prodi).
 | Kolom | Tipe Data | Keterangan |
 |---|---|---|
-| `id` | BIGINT PK | Identitas |
-| `parent_id` | BIGINT NULL FK | Relasi ke `org_units.id` (self-referencing) |
-| `name` | VARCHAR(255) | Nama unit (contoh: "Teknik Informatika", "Bagian Umum") |
-| `code` | VARCHAR(50) UNIQUE | Kode unit untuk penomoran surat (contoh: "TI", "BU") |
-| `type` | VARCHAR(50) | Tipe unit (contoh: `pimpinan`, `jurusan`, `prodi`, `biro`) |
-| `order_index` | INT | Urutan tampilan |
-| `created_at`, `updated_at` | TIMESTAMP | Waktu sistem |
+| `id` | BIGSERIAL PRIMARY KEY | Identitas |
+| `parent_id` | BIGINT NULL REFERENCES org_units(id) ON DELETE SET NULL | Hierarki unit |
+| `name` | VARCHAR(255) NOT NULL | Nama unit kerja (mis: "Jurusan Teknik Sipil") |
+| `code` | VARCHAR(50) NOT NULL UNIQUE | Kode unit penomoran surat (mis: "JTS") |
+| `type` | VARCHAR(50) NOT NULL | Tipe unit: `pimpinan`, `jurusan`, `prodi`, `bagian`, `unit_pelaksana` |
+| `order_index` | INT NOT NULL DEFAULT 0 | Urutan susunan organisasi |
+| `created_at`, `updated_at` | TIMESTAMPTZ | Waktu sistem |
 
 #### `positions`
-Master jabatan yang ada dalam instansi.
 | Kolom | Tipe Data | Keterangan |
 |---|---|---|
-| `id` | BIGINT PK | Identitas |
-| `org_unit_id` | BIGINT FK | Relasi ke `org_units.id` |
-| `name` | VARCHAR(255) | Nama jabatan (contoh: "Direktur", "Ketua Jurusan", "Staf TU") |
-| `level` | INT | Tingkat hierarki wewenang (1: Pimpinan Tertinggi, 2: Pimpinan Unit, dst) |
-| `is_penandatangan` | BOOLEAN | Apakah berwenang menandatangani surat resmi |
-| `created_at`, `updated_at` | TIMESTAMP | Waktu sistem |
+| `id` | BIGSERIAL PRIMARY KEY | Identitas |
+| `org_unit_id` | BIGINT NOT NULL REFERENCES org_units(id) ON DELETE CASCADE | Unit pemilik jabatan |
+| `name` | VARCHAR(255) NOT NULL | Nama jabatan (mis: "Ketua Jurusan", "Sekretaris Jurusan") |
+| `level` | INT NOT NULL DEFAULT 1 | Level hierarki vertikal |
+| `is_penandatangan` | BOOLEAN NOT NULL DEFAULT FALSE | Berwenang menandatangani naskah keluar |
+| `created_at`, `updated_at` | TIMESTAMPTZ | Waktu sistem |
+
+#### `position_delegations` (Delegasi Wewenang / Plt)
+| Kolom | Tipe Data | Keterangan |
+|---|---|---|
+| `id` | BIGSERIAL PRIMARY KEY | Identitas |
+| `position_id` | BIGINT NOT NULL REFERENCES positions(id) ON DELETE CASCADE | Jabatan yang didelegasikan |
+| `original_user_id` | BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE | Pejabat definitif |
+| `delegate_user_id` | BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE | Pejabat Plt/Penerima tugas |
+| `start_date` | DATE NOT NULL | Tanggal mulai berlaku |
+| `end_date` | DATE NOT NULL | Tanggal akhir berlaku |
+| `reason` | TEXT NOT NULL | Alasan penugasan (dinas luar, cuti) |
+| `surat_tugas_number` | VARCHAR(100) NULL | Nomor surat tugas penunjukan Plt |
+| `is_active` | BOOLEAN NOT NULL DEFAULT TRUE | Status keaktifan delegasi |
+| `created_at`, `updated_at` | TIMESTAMPTZ | Waktu sistem |
 
 #### `users`
-Tabel pengguna aplikasi.
 | Kolom | Tipe Data | Keterangan |
 |---|---|---|
-| `id` | BIGINT PK | Identitas |
-| `name` | VARCHAR(255) | Nama lengkap beserta gelar |
-| `nip` | VARCHAR(50) NULL | Nomor Induk Pegawai |
-| `email` | VARCHAR(191) UNIQUE | Email resmi pengguna |
-| `password` | VARCHAR(255) | Hash password |
-| `position_id` | BIGINT NULL FK | Relasi ke jabatan utama `positions.id` |
-| `phone` | VARCHAR(50) NULL | Nomor WhatsApp / kontak |
-| `is_active` | BOOLEAN | Status keaktifan (default: `true`) |
-| `signature_image_path` | VARCHAR(255) NULL | File tanda tangan basah pindaian |
+| `id` | BIGSERIAL PRIMARY KEY | Identitas |
+| `name` | VARCHAR(255) NOT NULL | Nama lengkap |
+| `nip` | VARCHAR(50) NULL UNIQUE | NIP / Identitas kepegawaian |
+| `email` | VARCHAR(191) NOT NULL UNIQUE | Email resmi |
+| `password` | VARCHAR(255) NOT NULL | Hash password argon2id/bcrypt |
+| `position_id` | BIGINT NULL REFERENCES positions(id) ON DELETE SET NULL | Posisi jabatan utama |
+| `phone` | VARCHAR(50) NULL | Nomor kontak/WhatsApp |
+| `is_active` | BOOLEAN NOT NULL DEFAULT TRUE | Status keaktifan akun |
+| `signature_image_path` | VARCHAR(255) NULL | Path berkas pindaian tanda tangan |
 | `two_factor_secret` | TEXT NULL | Secret 2FA TOTP |
-| `remember_token` | VARCHAR(100) NULL | Token autentikasi |
-| `created_at`, `updated_at` | TIMESTAMP | Waktu sistem |
-
-*(Catatan: RBAC menggunakan tabel standar `spatie/laravel-permission`: `roles`, `permissions`, `model_has_roles`, `model_has_permissions`).*
+| `remember_token` | VARCHAR(100) NULL | Token sesi |
+| `created_at`, `updated_at` | TIMESTAMPTZ | Waktu sistem |
 
 ---
 
-### 3.3 Klasifikasi Arsip
-
-#### `klasifikasi_surat`
-Kode klasifikasi dan pedoman retensi surat dinamis.
-| Kolom | Tipe Data | Keterangan |
-|---|---|---|
-| `id` | BIGINT PK | Identitas |
-| `kode` | VARCHAR(50) UNIQUE | Kode klasifikasi (contoh: `KP.01.02`, `HK.02`) |
-| `nama` | VARCHAR(255) | Deskripsi (contoh: "Penerimaan Pegawai", "Perjanjian Kerjasama") |
-| `parent_id` | BIGINT NULL FK | Relasi hirarki kode klasifikasi |
-| `retensi_aktif` | INT | Masa simpan aktif (dalam tahun) |
-| `retensi_inaktif` | INT | Masa simpan inaktif (dalam tahun) |
-| `nasib_akhir` | VARCHAR(50) | `permanen`, `musnah`, `nilai_guna` |
-| `created_at`, `updated_at` | TIMESTAMP | Waktu sistem |
-
----
-
-### 3.4 Surat Masuk & Disposisi
+### 4.3 Surat Masuk & Disposisi Berjenjang
 
 #### `surat_masuk`
-Pencatatan registrasi surat masuk.
 | Kolom | Tipe Data | Keterangan |
 |---|---|---|
-| `id` | BIGINT PK | Identitas |
-| `nomor_agenda` | VARCHAR(50) | Nomor urut agenda tahunan (contoh: `AG-2026-0001`) |
-| `nomor_surat_asal` | VARCHAR(100) | Nomor surat yang tertera dari pengirim |
-| `pengirim` | VARCHAR(255) | Nama instansi / pihak pengirim |
-| `tanggal_surat` | DATE | Tanggal yang tertera pada surat asal |
-| `tanggal_terima` | DATE | Tanggal surat diterima oleh instansi |
-| `perihal` | TEXT | Ringkasan pokok isi surat |
-| `sifat` | VARCHAR(50) | `biasa`, `penting`, `segera`, `rahasia` |
-| `jenis` | VARCHAR(50) | `undangan`, `edaran`, `permohonan`, `lainnya` |
-| `klasifikasi_id` | BIGINT FK | Relasi ke `klasifikasi_surat.id` |
-| `status` | VARCHAR(50) | `draft_registrasi`, `terdaftar`, `menunggu_disposisi`, `didisposisi`, `diproses`, `selesai`, `diarsipkan`, `dibatalkan` |
-| `confidentiality` | VARCHAR(50) | `umum`, `terbatas`, `rahasia` |
-| `alasan_batal` | TEXT NULL | Wajib diisi bila status `dibatalkan` |
-| `pendaftar_id` | BIGINT FK | Relasi ke `users.id` (petugas TU yang mendaftarkan) |
-| `qr_token` | VARCHAR(64) UNIQUE | Token unik verifikasi fisik lembar disposisi |
-| `created_at`, `updated_at`, `deleted_at` | TIMESTAMP | Soft deletes didukung |
+| `id` | BIGSERIAL PRIMARY KEY | Identitas |
+| `nomor_agenda` | VARCHAR(50) NOT NULL UNIQUE | Format agenda tahunan unik (mis: `SM-2026-0001`) |
+| `nomor_surat_asal` | VARCHAR(100) NOT NULL | Nomor surat yang tertera dari pengirim |
+| `pengirim` | VARCHAR(255) NOT NULL | Instansi / nama pengirim |
+| `tanggal_surat` | DATE NOT NULL | Tanggal naskah surat asal |
+| `tanggal_terima` | DATE NOT NULL | Tanggal diterima di instansi |
+| `perihal` | TEXT NOT NULL | Pokok isi surat |
+| `sifat` | VARCHAR(50) NOT NULL DEFAULT 'biasa' | `biasa`, `penting`, `segera`, `rahasia` |
+| `jenis` | VARCHAR(50) NOT NULL DEFAULT 'umum' | `undangan`, `edaran`, `permohonan`, `umum` |
+| `klasifikasi_id` | BIGINT NOT NULL REFERENCES klasifikasi_surat(id) | Kode klasifikasi arsip |
+| `status` | VARCHAR(50) NOT NULL DEFAULT 'terdaftar' | `draft_registrasi`, `terdaftar`, `menunggu_disposisi`, `didisposisi`, `diproses`, `selesai`, `diarsipkan`, `dibatalkan` |
+| `confidentiality` | VARCHAR(50) NOT NULL DEFAULT 'umum' | `umum`, `terbatas`, `rahasia` |
+| `alasan_batal` | TEXT NULL | Alasan jika surat dibatalkan |
+| `pendaftar_id` | BIGINT NOT NULL REFERENCES users(id) | Petugas pencatat surat |
+| `qr_token` | VARCHAR(64) NOT NULL UNIQUE | Token verifikasi lembar disposisi |
+| `created_at`, `updated_at`, `deleted_at` | TIMESTAMPTZ | Soft delete didukung |
 
-#### `surat_masuk_attachments`
-File pindaian surat masuk dan lampiran.
+#### `disposisi` (Disposisi Berjenjang)
 | Kolom | Tipe Data | Keterangan |
 |---|---|---|
-| `id` | BIGINT PK | Identitas |
-| `surat_masuk_id` | BIGINT FK | Relasi ke `surat_masuk.id` |
-| `file_name` | VARCHAR(255) | Nama file asli |
-| `file_path` | VARCHAR(255) | Lokasi penyimpanan file (disk aman) |
-| `mime_type` | VARCHAR(100) | Format mime (PDF/JPG/PNG) |
-| `file_size` | BIGINT | Ukuran dalam bytes |
-| `ocr_text` | TEXT NULL | Teks hasil ekstraksi OCR untuk pencarian full-text |
-| `created_at`, `updated_at` | TIMESTAMP | Waktu sistem |
-
-#### `disposisi`
-Header instruksi disposisi dari pimpinan / atasan.
-| Kolom | Tipe Data | Keterangan |
-|---|---|---|
-| `id` | BIGINT PK | Identitas |
-| `surat_masuk_id` | BIGINT FK | Relasi ke `surat_masuk.id` |
-| `parent_id` | BIGINT NULL FK | Relasi ke `disposisi.id` (untuk disposisi berjenjang) |
-| `pemberi_id` | BIGINT FK | Relasi ke `users.id` (pimpinan / pejabat pemberi disposisi) |
-| `instruksi` | TEXT | Petunjuk tindakan (contoh: "Tindak lanjuti segera", "Pelajari") |
-| `catatan` | TEXT NULL | Catatan tambahan khusus |
-| `prioritas` | VARCHAR(50) | `biasa`, `segera`, `sangat_segera` |
+| `id` | BIGSERIAL PRIMARY KEY | Identitas disposisi |
+| `surat_masuk_id` | BIGINT NOT NULL REFERENCES surat_masuk(id) ON DELETE CASCADE | Surat masuk yang didisposisikan |
+| `parent_disposisi_id`| BIGINT NULL REFERENCES disposisi(id) ON DELETE CASCADE | **Relasi induk (berjenjang)**: NULL untuk disposisi tingkat 1 dari Pimpinan Utama; terisi ID induk saat pejabat di bawahnya meneruskan instruksi ke unit/stafnya |
+| `pemberi_id` | BIGINT NOT NULL REFERENCES users(id) | Pejabat pemberi instruksi disposisi |
+| `pemberi_position_id`| BIGINT NOT NULL REFERENCES positions(id) | Posisi jabatan saat mendisposisikan |
+| `instruksi` | TEXT NOT NULL | Instruksi tindakan |
+| `catatan` | TEXT NULL | Catatan khusus dari pemberi |
+| `prioritas` | VARCHAR(50) NOT NULL DEFAULT 'biasa' | `biasa`, `segera`, `sangat_segera` |
 | `tenggat_waktu` | DATE NULL | Batas waktu tindak lanjut |
-| `created_at`, `updated_at` | TIMESTAMP | Waktu sistem |
+| `created_at`, `updated_at` | TIMESTAMPTZ | Waktu sistem |
 
 #### `disposisi_recipients`
-Detail penerima disposisi dan status tindak lanjutnya.
 | Kolom | Tipe Data | Keterangan |
 |---|---|---|
-| `id` | BIGINT PK | Identitas |
-| `disposisi_id` | BIGINT FK | Relasi ke `disposisi.id` |
-| `recipient_user_id`| BIGINT NULL FK | Relasi ke `users.id` |
-| `recipient_unit_id`| BIGINT NULL FK | Relasi ke `org_units.id` (bila disposisi per unit) |
-| `status` | VARCHAR(50) | `menunggu`, `dibaca`, `sedang_diproses`, `selesai` |
-| `read_at` | TIMESTAMP NULL | Waktu pertama kali penerima membuka disposisi |
-| `completed_at` | TIMESTAMP NULL | Waktu tindak lanjut diselesaikan |
-| `catatan_tindak_lanjut` | TEXT NULL | Laporan hasil tindak lanjut |
-| `bukti_path` | VARCHAR(255) NULL| File bukti penyelesaian |
-| `surat_keluar_id` | BIGINT NULL FK | Tautan ke draf surat balasan (bila ada) |
-| `created_at`, `updated_at` | TIMESTAMP | Waktu sistem |
+| `id` | BIGSERIAL PRIMARY KEY | Identitas penerima disposisi |
+| `disposisi_id` | BIGINT NOT NULL REFERENCES disposisi(id) ON DELETE CASCADE | Relasi ke instruksi disposisi |
+| `recipient_user_id` | BIGINT NULL REFERENCES users(id) ON DELETE SET NULL | Penerima personal |
+| `recipient_unit_id` | BIGINT NULL REFERENCES org_units(id) ON DELETE SET NULL | Penerima unit kerja |
+| `status` | VARCHAR(50) NOT NULL DEFAULT 'menunggu' | `menunggu`, `dibaca`, `sedang_diproses`, `selesai` |
+| `read_at` | TIMESTAMPTZ NULL | Waktu pertama dibuka |
+| `completed_at` | TIMESTAMPTZ NULL | Waktu selesai ditindaklanjuti |
+| `catatan_tindak_lanjut`| TEXT NULL | Uraian hasil pelaksanaan |
+| `bukti_path` | VARCHAR(255) NULL | Path file bukti penyelesaian |
+| `surat_keluar_id` | BIGINT NULL REFERENCES surat_keluar(id) ON DELETE SET NULL | Tautan surat keluar balasan |
+| `created_at`, `updated_at` | TIMESTAMPTZ | Waktu sistem |
 
 ---
 
-### 3.5 Surat Keluar & Persetujuan (Approval)
-
-#### `template_surat`
-Template naskah dinas resmi.
-| Kolom | Tipe Data | Keterangan |
-|---|---|---|
-| `id` | BIGINT PK | Identitas |
-| `nama` | VARCHAR(255) | Nama template (mis: "Surat Tugas", "Nota Dinas", "Undangan") |
-| `jenis` | VARCHAR(50) | Jenis surat terkait |
-| `konten_html` | TEXT | Template body dengan placeholder `{nama}`, `{nip}`, `{perihal}` |
-| `default_sifat` | VARCHAR(50) | Sifat bawaan template |
-| `klasifikasi_id` | BIGINT NULL FK | Relasi bawaan ke `klasifikasi_surat.id` |
-| `created_at`, `updated_at` | TIMESTAMP | Waktu sistem |
+### 4.4 Surat Keluar, Persetujuan, Tembusan & Pengiriman
 
 #### `surat_keluar`
-Pencatatan naskah surat keluar.
 | Kolom | Tipe Data | Keterangan |
 |---|---|---|
-| `id` | BIGINT PK | Identitas |
-| `nomor_surat` | VARCHAR(100) NULL | Nomor resmi (diterbitkan setelah disetujui penuh) |
-| `template_id` | BIGINT NULL FK | Relasi ke `template_surat.id` |
-| `klasifikasi_id` | BIGINT FK | Relasi ke `klasifikasi_surat.id` |
-| `org_unit_id` | BIGINT FK | Unit pembuat naskah (`org_units.id`) |
-| `pembuat_id` | BIGINT FK | Relasi ke `users.id` (staf penyusun draf) |
-| `penandatangan_id` | BIGINT FK | Relasi ke `users.id` (pejabat berwenang menandatangani) |
-| `reply_to_surat_masuk_id` | BIGINT NULL FK | Menautkan bila surat keluar merupakan balasan |
-| `perihal` | TEXT | Pokok isi surat |
-| `isi_surat` | TEXT | Konten surat (HTML / rich text) |
-| `sifat` | VARCHAR(50) | `biasa`, `penting`, `segera`, `rahasia` |
-| `status` | VARCHAR(50) | `draf`, `diajukan`, `dalam_pemeriksaan`, `perlu_revisi`, `disetujui`, `bernomor`, `menunggu_ttd`, `ditandatangani`, `terkirim`, `diarsipkan`, `ditolak`, `dibatalkan` |
-| `tujuan` | JSONB / TEXT | Daftar pihak tujuan surat |
-| `tembusan` | JSONB / TEXT | Daftar tembusan internal / eksternal |
-| `qr_token` | VARCHAR(64) UNIQUE | Token publik verifikasi keaslian surat |
-| `alasan_batal` | TEXT NULL | Alasan pembatalan surat bernomor |
-| `tanggal_kirim` | TIMESTAMP NULL | Waktu pengiriman resmi |
-| `kanal_pengiriman` | VARCHAR(50) NULL | `email`, `pos`, `kurir`, `manual` |
-| `resi_pengiriman` | VARCHAR(100) NULL | Nomor resi ekspedisi |
-| `created_at`, `updated_at`, `deleted_at` | TIMESTAMP | Soft deletes |
+| `id` | BIGSERIAL PRIMARY KEY | Identitas |
+| `nomor_surat` | VARCHAR(100) NULL UNIQUE | Nomor resmi surat (diterbitkan saat disetujui penuh) |
+| `template_id` | BIGINT NULL REFERENCES template_surat(id) | Template naskah yang dipakai |
+| `klasifikasi_id` | BIGINT NOT NULL REFERENCES klasifikasi_surat(id) | Kode klasifikasi arsip |
+| `org_unit_id` | BIGINT NOT NULL REFERENCES org_units(id) | Unit asal pembuat surat |
+| `pembuat_id` | BIGINT NOT NULL REFERENCES users(id) | Staf penyusun draf |
+| `penandatangan_id`| BIGINT NOT NULL REFERENCES users(id) | Pejabat penandatangan akhir |
+| `reply_to_surat_masuk_id` | BIGINT NULL REFERENCES surat_masuk(id) | Referensi surat masuk jika merupakan balasan |
+| `perihal` | TEXT NOT NULL | Pokok naskah dinas |
+| `isi_surat` | TEXT NOT NULL | Konten surat (rich text / HTML) |
+| `sifat` | VARCHAR(50) NOT NULL DEFAULT 'biasa' | `biasa`, `penting`, `segera`, `rahasia` |
+| `status` | VARCHAR(50) NOT NULL DEFAULT 'draf' | `draf`, `diajukan`, `dalam_pemeriksaan`, `perlu_revisi`, `disetujui`, `bernomor`, `menunggu_ttd`, `ditandatangani`, `terkirim`, `diarsipkan`, `ditolak`, `dibatalkan` |
+| `tujuan` | JSONB NOT NULL DEFAULT '[]'::jsonb | Daftar penerima utama naskah |
+| `qr_token` | VARCHAR(64) NOT NULL UNIQUE | Token publik verifikasi keaslian dokumen |
+| `alasan_batal` | TEXT NULL | Keterangan jika surat bernomor dibatalkan |
+| `tanggal_kirim` | TIMESTAMPTZ NULL | Waktu pengiriman resmi |
+| `kanal_pengiriman`| VARCHAR(50) NULL | `email`, `pos`, `kurir`, `manual` |
+| `resi_pengiriman` | VARCHAR(100) NULL | Nomor resi/tanda terima pengiriman |
+| `created_at`, `updated_at`, `deleted_at` | TIMESTAMPTZ | Soft delete didukung |
 
-#### `surat_keluar_approvals`
-Log riwayat alur persetujuan dan paraf berjenjang.
+#### `surat_keluar_tembusan` (Daftar Tembusan Surat Keluar)
 | Kolom | Tipe Data | Keterangan |
 |---|---|---|
-| `id` | BIGINT PK | Identitas |
-| `surat_keluar_id` | BIGINT FK | Relasi ke `surat_keluar.id` |
-| `step_order` | INT | Urutan tahap pemeriksaan |
-| `reviewer_id` | BIGINT FK | Relasi ke `users.id` (pemeriksa / penandatangan) |
-| `action` | VARCHAR(50) | `diajukan`, `paraf`, `disetujui`, `revisi_diminta`, `ditolak` |
-| `notes` | TEXT NULL | Catatan koreksi / alasan penolakan |
-| `created_at` | TIMESTAMP | Waktu eksekusi aksi |
-
-#### `surat_keluar_versions`
-Menyimpan snapshot draf ketika ada permintaan revisi.
-| Kolom | Tipe Data | Keterangan |
-|---|---|---|
-| `id` | BIGINT PK | Identitas |
-| `surat_keluar_id` | BIGINT FK | Relasi ke `surat_keluar.id` |
-| `version_number` | INT | Nomor revisi (1, 2, 3...) |
-| `content_snapshot`| TEXT | Snapshot isi surat saat versi tersebut diajukan |
-| `created_by` | BIGINT FK | Penyunting revisi |
-| `created_at` | TIMESTAMP | Waktu simpan versi |
-
-#### `numbering_sequences`
-Tabel pengunci urutan nomor surat otomatis per tahun dan unit kerja.
-| Kolom | Tipe Data | Keterangan |
-|---|---|---|
-| `id` | BIGINT PK | Identitas |
-| `org_unit_id` | BIGINT FK | Unit pembuat nomor |
-| `year` | INT | Tahun penomoran (contoh: 2026) |
-| `format_pattern` | VARCHAR(255) | Pola format token (mis: `{urut}/{kode_unit}/{kode_klasifikasi}/{bulan_romawi}/{tahun}`) |
-| `current_number` | INT | Counter angka terakhir yang digunakan |
-| `updated_at` | TIMESTAMP | Waktu update |
-
-*Index Unik: `UNIQUE(org_unit_id, year)`.*
-
-#### `tanda_tangan`
-Merekam jejak penandatanganan surat keluar.
-| Kolom | Tipe Data | Keterangan |
-|---|---|---|
-| `id` | BIGINT PK | Identitas |
-| `surat_keluar_id` | BIGINT FK | Relasi ke `surat_keluar.id` |
-| `user_id` | BIGINT FK | Pejabat penandatangan |
-| `tipe` | VARCHAR(50) | `basah` (unggah scan), `tte` (elektronik bersertifikat) |
-| `provider` | VARCHAR(50) NULL | Penyedia TTE (contoh: BSrE, Privy, dummy) |
-| `certificate_info`| JSONB NULL | Metadata sertifikat X.509 |
-| `document_hash` | VARCHAR(128) | SHA-256 hash dokumen final untuk jaminan anti-pemalsuan |
-| `signed_at` | TIMESTAMP | Waktu tanda tangan |
+| `id` | BIGSERIAL PRIMARY KEY | Identitas |
+| `surat_keluar_id` | BIGINT NOT NULL REFERENCES surat_keluar(id) ON DELETE CASCADE | Surat terkait |
+| `recipient_type` | VARCHAR(50) NOT NULL | `internal_unit`, `internal_position`, `external` |
+| `target_unit_id` | BIGINT NULL REFERENCES org_units(id) | Terisi bila tembusan ke unit internal |
+| `target_position_id`| BIGINT NULL REFERENCES positions(id) | Terisi bila tembusan ke jabatan tertentu |
+| `external_name` | VARCHAR(255) NULL | Nama tembusan pihak eksternal |
+| `order_index` | INT NOT NULL DEFAULT 1 | Urutan daftar tembusan |
+| `created_at` | TIMESTAMPTZ NOT NULL DEFAULT NOW() | Waktu pencatatan |
 
 ---
 
-### 3.6 Kearsipan Dinamis & Log Audit
+### 4.5 Notifikasi & Jejak Audit
 
-#### `arsip`
-Penyimpanan metadata kearsipan.
+#### `notifications` (Notifikasi Pengguna)
 | Kolom | Tipe Data | Keterangan |
 |---|---|---|
-| `id` | BIGINT PK | Identitas |
-| `document_type` | VARCHAR(50) | `surat_masuk`, `surat_keluar`, `dokumen_internal` |
-| `document_id` | BIGINT | ID dokumen terkait |
-| `klasifikasi_id` | BIGINT FK | Relasi ke `klasifikasi_surat.id` |
-| `physical_location`| VARCHAR(255) NULL| Lokasi fisik berkas (mis: "Gedung A, Rak 04, Box 12") |
-| `retention_status`| VARCHAR(50) | `aktif`, `inaktif`, `siap_disusutkan`, `dimusnahkan`, `diserahkan` |
-| `active_until` | DATE | Tanggal berakhir masa retensi aktif |
-| `inactive_until` | DATE | Tanggal berakhir masa retensi inaktif |
-| `archived_at` | TIMESTAMP | Waktu diarsipkan |
+| `id` | UUID PRIMARY KEY | ID UUID standar Laravel Notification |
+| `type` | VARCHAR(255) NOT NULL | Class notifikasi (mis: `App\Notifications\DisposisiBaru`) |
+| `notifiable_type` | VARCHAR(255) NOT NULL | Model penerima (`App\Domain\Pengguna\Models\User`) |
+| `notifiable_id` | BIGINT NOT NULL | ID user penerima |
+| `data` | JSONB NOT NULL | Payload notifikasi (judul, isi, link, aksi) |
+| `read_at` | TIMESTAMPTZ NULL | Waktu dibaca |
+| `created_at`, `updated_at` | TIMESTAMPTZ | Waktu sistem |
 
 #### `activity_logs` (Append-Only)
-Jejak audit seluruh aktivitas penting.
 | Kolom | Tipe Data | Keterangan |
 |---|---|---|
-| `id` | BIGINT PK | Identitas urut |
-| `causer_id` | BIGINT NULL FK | Relasi ke `users.id` (pelaku) |
-| `action` | VARCHAR(100) | Aksi (mis: `surat_masuk.created`, `surat_keluar.approved`, `number.generated`) |
-| `subject_type` | VARCHAR(100) | Model target (mis: `App\Domain\SuratMasuk\Models\SuratMasuk`) |
-| `subject_id` | BIGINT | ID target |
-| `description` | TEXT | Keterangan mudah dibaca |
-| `properties` | JSONB / JSON | Snapshot data sebelum vs sesudah aksi |
-| `ip_address` | VARCHAR(45) | Alamat IP pengguna |
-| `user_agent` | TEXT | Browser / perangkat pengguna |
-| `created_at` | TIMESTAMP | Waktu kejadian (append-only) |
+| `id` | BIGSERIAL PRIMARY KEY | Identitas urut |
+| `causer_id` | BIGINT NULL REFERENCES users(id) ON DELETE SET NULL | Pelaku aksi |
+| `action` | VARCHAR(100) NOT NULL | Kode aksi (mis: `surat_masuk.created`, `surat_keluar.approved`) |
+| `subject_type` | VARCHAR(100) NOT NULL | Model sasaran |
+| `subject_id` | BIGINT NOT NULL | ID objek sasaran |
+| `description` | TEXT NOT NULL | Narasi keterangan aktivitas |
+| `properties` | JSONB NOT NULL DEFAULT '{}'::jsonb | Snapshot data sebelum vs sesudah |
+| `ip_address` | VARCHAR(45) NULL | Alamat IP pemanggil |
+| `user_agent` | TEXT NULL | Browser dan informasi perangkat |
+| `created_at` | TIMESTAMPTZ NOT NULL DEFAULT NOW() | Waktu pencatatan (tanpa `updated_at`) |
 
 ---
 
-## 4. Strategi Indeks & Performa Tinggi
+## 5. Proteksi Append-Only pada `activity_logs` (Trigger PostgreSQL)
 
-Untuk memastikan waktu akses tetap **< 2 detik saat data mencapai 100.000 surat**:
+Di samping pembatasan di level Model Eloquent, PostgreSQL mengunci tabel `activity_logs` melalui trigger database berikut:
 
-1. **Indeks Komposit untuk Filter Daftar Surat Masuk:**
-   ```sql
-   CREATE INDEX idx_surat_masuk_filter ON surat_masuk (status, tanggal_terima DESC, klasifikasi_id);
-   CREATE INDEX idx_surat_masuk_agenda ON surat_masuk (nomor_agenda);
-   CREATE INDEX idx_surat_masuk_pendaftar ON surat_masuk (pendaftar_id, created_at DESC);
-   ```
-2. **Indeks Komposit untuk Filter Surat Keluar:**
-   ```sql
-   CREATE INDEX idx_surat_keluar_filter ON surat_keluar (status, org_unit_id, created_at DESC);
-   CREATE INDEX idx_surat_keluar_penandatangan ON surat_keluar (penandatangan_id, status);
-   ```
-3. **Indeks Disposisi:**
-   ```sql
-   CREATE INDEX idx_disposisi_recipients_user ON disposisi_recipients (recipient_user_id, status, created_at DESC);
-   CREATE INDEX idx_disposisi_surat ON disposisi (surat_masuk_id);
-   ```
-4. **Indeks Full-Text Search (Pencarian Cepat):**
-   * PostgreSQL:
-     ```sql
-     CREATE INDEX idx_surat_masuk_fts ON surat_masuk USING gin(to_tsvector('indonesian', perihal || ' ' || pengirim));
-     CREATE INDEX idx_surat_keluar_fts ON surat_keluar USING gin(to_tsvector('indonesian', perihal || ' ' || isi_surat));
-     ```
-   * MySQL:
-     ```sql
-     ALTER TABLE surat_masuk ADD FULLTEXT idx_surat_masuk_ft (perihal, pengirim);
-     ALTER TABLE surat_keluar ADD FULLTEXT idx_surat_keluar_ft (perihal, isi_surat);
-     ```
+```sql
+CREATE OR REPLACE FUNCTION prevent_activity_logs_modification()
+RETURNS TRIGGER AS $$
+BEGIN
+    RAISE EXCEPTION 'TABEL activity_logs BERSIFAT APPEND-ONLY: Operasi UPDATE dan DELETE dilarang.';
+END;
+$$ LANGUAGE plpgsql;
 
----
-
-## 5. Strategi Transaksi & Row-Locking (Penomoran Surat Anti-Ganda)
-
-Penerbitan nomor surat resmi wajib diisolasi di dalam database transaction dengan `lockForUpdate()`:
-
-```php
-DB::transaction(function () use ($unitId, $year, $formatPattern, $klasifikasiCode) {
-    // Kunci baris urutan nomor untuk unit & tahun ini secara eksklusif
-    $sequence = NumberingSequence::where('org_unit_id', $unitId)
-        ->where('year', $year)
-        ->lockForUpdate()
-        ->first();
-
-    if (!$sequence) {
-        $sequence = NumberingSequence::create([
-            'org_unit_id'    => $unitId,
-            'year'           => $year,
-            'format_pattern' => $formatPattern,
-            'current_number' => 0,
-        ]);
-        // Re-lock
-        $sequence = NumberingSequence::where('id', $sequence->id)->lockForUpdate()->first();
-    }
-
-    $sequence->current_number += 1;
-    $sequence->save();
-
-    // Format nomor sesuai token
-    $nomorSurat = NumberingService::formatToken(
-        $sequence->format_pattern,
-        $sequence->current_number,
-        $unitCode,
-        $klasifikasiCode,
-        $year
-    );
-
-    return $nomorSurat;
-});
+CREATE TRIGGER trg_activity_logs_no_update_delete
+BEFORE UPDATE OR DELETE ON activity_logs
+FOR EACH ROW
+EXECUTE FUNCTION prevent_activity_logs_modification();
 ```
-Dengan strategi ini, dua proses approval yang selesai pada milidetik yang sama dijamin mendapatkan urutan nomor berurutan tanpa risiko duplikasi atau race condition.
+
+---
+
+## 6. Strategi Indeks & Performa Tinggi (PostgreSQL GIN & Composite)
+
+```sql
+-- Filter cepat Surat Masuk
+CREATE INDEX idx_surat_masuk_status_date ON surat_masuk (status, tanggal_terima DESC, klasifikasi_id);
+CREATE INDEX idx_surat_masuk_agenda ON surat_masuk (nomor_agenda);
+CREATE INDEX idx_surat_masuk_fts ON surat_masuk USING gin(to_tsvector('indonesian', perihal || ' ' || pengirim));
+
+-- Filter cepat Surat Keluar
+CREATE INDEX idx_surat_keluar_status_unit ON surat_keluar (status, org_unit_id, created_at DESC);
+CREATE INDEX idx_surat_keluar_penandatangan ON surat_keluar (penandatangan_id, status);
+CREATE INDEX idx_surat_keluar_fts ON surat_keluar USING gin(to_tsvector('indonesian', perihal || ' ' || isi_surat));
+
+-- Disposisi berjenjang & penerima
+CREATE INDEX idx_disposisi_parent ON disposisi (parent_disposisi_id);
+CREATE INDEX idx_disposisi_surat ON disposisi (surat_masuk_id);
+CREATE INDEX idx_disposisi_recipient_user_status ON disposisi_recipients (recipient_user_id, status);
+
+-- Delegasi wewenang aktif
+CREATE INDEX idx_delegations_active ON position_delegations (position_id, start_date, end_date) WHERE is_active = TRUE;
+```
