@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Domain\Lisensi\Models\LicenseState;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
@@ -107,5 +108,45 @@ class LicenseReadOnlyMiddlewareTest extends TestCase
 
         $this->get('/test-document')->assertOk();
         $this->post('/test-document')->assertOk();
+    }
+
+    public function test_login_logout_and_export_routes_remain_accessible_in_read_only_mode(): void
+    {
+        $license = LicenseState::current();
+        $license->update([
+            'status' => 'expired',
+            'expires_at' => Carbon::now()->subDays(30),
+            'grace_period_days' => 14,
+        ]);
+
+        $this->assertTrue($license->isReadOnly());
+
+        // 1. Setup dummy export route
+        Route::middleware(['web'])->post('/surat/export-excel', function () {
+            return response()->json(['status' => 'exported']);
+        });
+
+        // 2. Test Login route is not blocked by read-only
+        $user = User::factory()->create([
+            'email' => 'staff@contoh.ac.id',
+            'password' => bcrypt('password'),
+        ]);
+
+        $loginResponse = $this->post('/login', [
+            'email' => 'staff@contoh.ac.id',
+            'password' => 'password',
+        ]);
+        $loginResponse->assertRedirect('/dashboard');
+        $this->assertAuthenticatedAs($user);
+
+        // 3. Test Export mutation is not blocked by read-only
+        $exportResponse = $this->postJson('/surat/export-excel');
+        $exportResponse->assertOk();
+        $exportResponse->assertJson(['status' => 'exported']);
+
+        // 4. Test Logout route is not blocked by read-only
+        $logoutResponse = $this->post('/logout');
+        $logoutResponse->assertRedirect('/login');
+        $this->assertGuest();
     }
 }

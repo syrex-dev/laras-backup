@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Domain\Audit\Services\AuditLogger;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
-use App\Models\ProfilOrganisasi;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class LoginController extends Controller
 {
@@ -16,10 +17,7 @@ class LoginController extends Controller
             return redirect()->route('dashboard');
         }
 
-        $profil = ProfilOrganisasi::first();
-        $defaultTheme = $profil->tema_default ?? 'light';
-
-        return view('auth.login', compact('profil', 'defaultTheme'));
+        return Inertia::render('Auth/Login');
     }
 
     public function login(LoginRequest $request)
@@ -28,17 +26,36 @@ class LoginController extends Controller
 
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
+            $user = Auth::user();
+
+            AuditLogger::log(
+                action: 'auth.login',
+                subject: $user,
+                description: "Pengguna {$user->name} ({$user->email}) berhasil login ke sistem",
+                causer: $user
+            );
 
             return redirect()->intended(route('dashboard'));
         }
 
         return back()->withErrors([
-            'email' => 'Email atau password tidak sesuai.',
+            'email' => 'Email atau kata sandi yang Anda masukkan tidak sesuai.',
         ])->onlyInput('email');
     }
 
     public function logout(Request $request)
     {
+        $user = Auth::user();
+
+        if ($user) {
+            AuditLogger::log(
+                action: 'auth.logout',
+                subject: $user,
+                description: "Pengguna {$user->name} ({$user->email}) keluar dari sistem",
+                causer: $user
+            );
+        }
+
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();

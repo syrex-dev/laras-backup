@@ -18,88 +18,96 @@ class PoliteknikDemoSeeder extends Seeder
 {
     public function run(): void
     {
+        // Pengaman: Seeder demo HANYA boleh berjalan di environment local atau testing
+        if (! app()->environment(['local', 'testing'])) {
+            $this->command?->warn('PoliteknikDemoSeeder dilewati karena sistem tidak berada pada environment local/testing.');
+
+            return;
+        }
+
         // -------------------------------------------------------------------
-        // 1. Roles & Permissions Granular
+        // 1. Roles & Permissions Granular (Sesuai SOP Persuratan)
         // -------------------------------------------------------------------
         $permissions = [
-            'surat-masuk.view',
-            'surat-masuk.create',
-            'surat-masuk.update',
-            'surat-masuk.cancel',
-            'disposisi.view',
-            'disposisi.create',
-            'disposisi.forward',
-            'disposisi.process',
-            'surat-keluar.view',
-            'surat-keluar.create',
-            'surat-keluar.review',
-            'surat-keluar.numbering',
-            'surat-keluar.sign',
-            'arsip.view',
-            'arsip.manage',
-            'organisasi.manage',
-            'pengaturan.manage',
-            'lisensi.manage',
+            'surat-masuk.lihat',
+            'surat-masuk.registrasi',
+            'surat-masuk.ubah',
+            'surat-masuk.batalkan',
+            'disposisi.lihat',
+            'disposisi.buat',
+            'disposisi.teruskan',
+            'disposisi.tindaklanjut',
+            'surat-keluar.lihat',
+            'surat-keluar.buat',
+            'surat-keluar.periksa',
+            'surat-keluar.penomoran',
+            'surat-keluar.tandatangan',
+            'arsip.lihat',
+            'arsip.kelola',
+            'organisasi.kelola',
+            'pengaturan.kelola',
+            'lisensi.kelola',
         ];
 
         foreach ($permissions as $permName) {
             Permission::firstOrCreate(['name' => $permName, 'guard_name' => 'web']);
         }
 
+        // Sesuai PRD Bagian 6: Admin Instansi, Pimpinan, Kepala Unit, Staf TU, Petugas Arsip
         $rolesData = [
             'Admin Instansi' => $permissions,
             'Admin' => $permissions,
             'Pimpinan' => [
-                'surat-masuk.view',
-                'disposisi.view',
-                'disposisi.create',
-                'disposisi.forward',
-                'surat-keluar.view',
-                'surat-keluar.review',
-                'surat-keluar.sign',
-                'arsip.view',
+                'surat-masuk.lihat',
+                'disposisi.lihat',
+                'disposisi.buat',
+                'disposisi.teruskan',
+                'surat-keluar.lihat',
+                'surat-keluar.periksa',
+                'surat-keluar.tandatangan',
+                'arsip.lihat',
             ],
-            'Pejabat/Kepala Unit' => [
-                'surat-masuk.view',
-                'disposisi.view',
-                'disposisi.forward',
-                'disposisi.process',
-                'surat-keluar.view',
-                'surat-keluar.create',
-                'surat-keluar.review',
-                'arsip.view',
+            'Kepala Unit' => [
+                'surat-masuk.lihat',
+                'disposisi.lihat',
+                'disposisi.teruskan',
+                'disposisi.tindaklanjut',
+                'surat-keluar.lihat',
+                'surat-keluar.buat',
+                'surat-keluar.periksa',
+                'arsip.lihat',
             ],
-            'Staf/Tata Usaha' => [
-                'surat-masuk.view',
-                'surat-masuk.create',
-                'surat-masuk.update',
-                'surat-masuk.cancel',
-                'disposisi.view',
-                'disposisi.process',
-                'surat-keluar.view',
-                'surat-keluar.create',
-                'surat-keluar.numbering',
-                'arsip.view',
+            'Staf TU' => [
+                'surat-masuk.lihat',
+                'surat-masuk.registrasi',
+                'surat-masuk.ubah',
+                'surat-masuk.batalkan',
+                'disposisi.lihat',
+                'disposisi.tindaklanjut',
+                'surat-keluar.lihat',
+                'surat-keluar.buat',
+                'surat-keluar.penomoran',
+                'arsip.lihat',
             ],
             'Sekretaris' => [
-                'surat-masuk.view',
-                'surat-masuk.create',
-                'surat-keluar.view',
-                'surat-keluar.create',
-                'surat-keluar.numbering',
-                'disposisi.view',
+                'surat-masuk.lihat',
+                'surat-masuk.registrasi',
+                'surat-keluar.lihat',
+                'surat-keluar.buat',
+                'surat-keluar.penomoran',
+                'disposisi.lihat',
             ],
             'Petugas Arsip' => [
-                'surat-masuk.view',
-                'surat-keluar.view',
-                'arsip.view',
-                'arsip.manage',
+                'surat-masuk.lihat',
+                'surat-keluar.lihat',
+                'arsip.lihat',
+                'arsip.kelola',
             ],
             'Staf' => [
-                'surat-masuk.view',
-                'disposisi.view',
-                'disposisi.process',
-                'surat-keluar.view',
+                'surat-masuk.lihat',
+                'disposisi.lihat',
+                'disposisi.tindaklanjut',
+                'surat-keluar.lihat',
             ],
         ];
 
@@ -109,16 +117,16 @@ class PoliteknikDemoSeeder extends Seeder
         }
 
         // -------------------------------------------------------------------
-        // 2. Profil Instansi (Politeknik Negeri Bandung)
+        // 2. Profil Instansi Fiktif ("Politeknik Contoh", contoh.ac.id)
         // -------------------------------------------------------------------
         $profile = InstitutionProfile::current();
         $profile->update([
-            'name' => 'Politeknik Negeri Bandung',
-            'alias' => 'POLBAN',
-            'address' => 'Jl. Gegerkalong Hilir, Ds. Ciwaruga, Bandung 40012',
-            'email' => 'tatausaha@polban.ac.id',
-            'phone' => '(022) 2013789',
-            'website' => 'https://www.polban.ac.id',
+            'name' => 'Politeknik Contoh Indonesia',
+            'alias' => 'POLTEK-CONTOH',
+            'address' => 'Jl. Pendidikan Nasional No. 123, Kota Contoh 12345',
+            'email' => 'tatausaha@contoh.ac.id',
+            'phone' => '(021) 555-1234',
+            'website' => 'https://contoh.ac.id',
             'timezone' => 'Asia/Jakarta',
             'default_theme' => 'emerald',
             'terminology_dict' => [
@@ -137,8 +145,8 @@ class PoliteknikDemoSeeder extends Seeder
         // -------------------------------------------------------------------
         $license = LicenseState::current();
         $license->update([
-            'license_key' => 'LIC-POLBAN-STANDAR-2026-ACTIVE',
-            'institution_slug' => 'polban-bandung',
+            'license_key' => 'LIC-CONTOH-STANDAR-2026-ACTIVE',
+            'institution_slug' => 'politeknik-contoh',
             'plan' => 'standar',
             'status' => 'active',
             'expires_at' => Carbon::now()->addYear(),
@@ -155,7 +163,7 @@ class PoliteknikDemoSeeder extends Seeder
                 'api' => false,
             ],
             'last_verified_at' => Carbon::now(),
-            'signature_hash' => hash('sha256', 'LIC-POLBAN-STANDAR-2026-ACTIVE|polban-bandung|active'),
+            'signature_hash' => hash('sha256', 'LIC-CONTOH-STANDAR-2026-ACTIVE|politeknik-contoh|active'),
         ]);
 
         // -------------------------------------------------------------------
@@ -225,11 +233,11 @@ class PoliteknikDemoSeeder extends Seeder
         );
 
         // -------------------------------------------------------------------
-        // 6. Akun Pengguna Demo (Password: 'password')
+        // 6. Akun Pengguna Demo Fiktif (Password: 'password')
         // -------------------------------------------------------------------
         $demoUsers = [
             [
-                'email' => 'admin@polban.ac.id',
+                'email' => 'admin@contoh.ac.id',
                 'name' => 'Administrator Instansi',
                 'nip' => '198501012010121001',
                 'phone' => '081234567890',
@@ -237,39 +245,39 @@ class PoliteknikDemoSeeder extends Seeder
                 'roles' => ['Admin Instansi', 'Admin'],
             ],
             [
-                'email' => 'direktur@polban.ac.id',
-                'name' => 'Dr. Ir. Marwanto, M.T.',
+                'email' => 'direktur@contoh.ac.id',
+                'name' => 'Dr. Ir. Budi Santoso, M.T.',
                 'nip' => '196803151993031002',
                 'phone' => '081234567891',
                 'position_id' => $posDirektur->id,
                 'roles' => ['Pimpinan'],
             ],
             [
-                'email' => 'wadir1@polban.ac.id',
-                'name' => 'Prof. Dr. Ir. Budi Santoso, M.Eng.',
+                'email' => 'wadir1@contoh.ac.id',
+                'name' => 'Prof. Dr. Ir. Haryanto, M.Eng.',
                 'nip' => '197105201997021003',
                 'phone' => '081234567892',
                 'position_id' => $posWadir1->id,
                 'roles' => ['Pimpinan'],
             ],
             [
-                'email' => 'kajur.jtk@polban.ac.id',
+                'email' => 'kajur.jtk@contoh.ac.id',
                 'name' => 'Drs. Hendra Permana, M.Kom.',
                 'nip' => '197508122001121001',
                 'phone' => '081234567893',
                 'position_id' => $posKajurJtk->id,
-                'roles' => ['Pejabat/Kepala Unit'],
+                'roles' => ['Kepala Unit'],
             ],
             [
-                'email' => 'tu@polban.ac.id',
+                'email' => 'tu@contoh.ac.id',
                 'name' => 'Siti Rahayu, A.Md.',
                 'nip' => '199002142014042001',
                 'phone' => '081234567894',
                 'position_id' => $posStafTu->id,
-                'roles' => ['Staf/Tata Usaha', 'Sekretaris', 'Staf'],
+                'roles' => ['Staf TU', 'Sekretaris', 'Staf'],
             ],
             [
-                'email' => 'arsip@polban.ac.id',
+                'email' => 'arsip@contoh.ac.id',
                 'name' => 'Agus Budiman, S.Sos.',
                 'nip' => '199209182018011002',
                 'phone' => '081234567895',
@@ -298,8 +306,8 @@ class PoliteknikDemoSeeder extends Seeder
         // -------------------------------------------------------------------
         // 7. Contoh Delegasi Wewenang / Plt
         // -------------------------------------------------------------------
-        $direkturUser = User::where('email', 'direktur@polban.ac.id')->first();
-        $wadirUser = User::where('email', 'wadir1@polban.ac.id')->first();
+        $direkturUser = User::where('email', 'direktur@contoh.ac.id')->first();
+        $wadirUser = User::where('email', 'wadir1@contoh.ac.id')->first();
 
         if ($direkturUser && $wadirUser) {
             PositionDelegation::firstOrCreate(
@@ -308,7 +316,7 @@ class PoliteknikDemoSeeder extends Seeder
                     'original_user_id' => $direkturUser->id,
                     'delegate_user_id' => $wadirUser->id,
                     'end_date' => Carbon::now()->addDays(12)->toDateString(),
-                    'reason' => 'Dinas luar menghadiri Konferensi Poltek Nasional di Denpasar',
+                    'reason' => 'Dinas luar menghadiri Koordinasi Nasional di Jakarta',
                     'surat_tugas_number' => 'ST/089/DIR/X/2026',
                     'is_active' => true,
                 ]

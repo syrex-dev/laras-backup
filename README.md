@@ -1,59 +1,98 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# E-Office (Tata Usaha & Persuratan Digital Instansi)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Aplikasi persuratan digital, tata usaha naskah dinas, disposisi berjenjang, dan kearsipan dinamis berbasis web modern (Laravel 11 + React Inertia + Tailwind CSS + PostgreSQL).
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 🚀 Panduan Memulai Cepat (Quick Start)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### 1. Prasyarat Sistem
+- **PHP**: 8.2 atau 8.3+ (ekstensi `pdo`, `pdo_sqlite` untuk unit test lokal, dan `pdo_pgsql` untuk PostgreSQL).
+- **Node.js**: v20+ dan npm.
+- **Composer**: v2+.
+- **Database**: PostgreSQL 15+ (target produksi) atau SQLite (pengembangan lokal).
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### 2. Instalasi Dependensi
+```bash
+# Salin konfigurasi environment
+cp .env.example .env
 
-## Learning Laravel
+# Instal paket backend
+composer install
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+# Instal paket frontend
+npm install
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+# Buat application key
+php artisan key:generate
+```
 
-## Laravel Sponsors
+### 3. Migrasi & Data Uji Percontohan (Demo Seeder)
+```bash
+# Jalankan migrasi dan isi data demo Politeknik Contoh Indonesia
+php artisan migrate:fresh --seed
+```
+> [!NOTE]
+> `PoliteknikDemoSeeder` dilindungi pengaman sistem dan **HANYA** dapat dijalankan di environment `local` atau `testing`.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### 4. Menjalankan Server Pengembangan
+```bash
+# Jalankan server frontend Vite (Hot Module Replacement)
+npm run dev
 
-### Premium Partners
+# Di terminal terpisah, jalankan server Laravel
+php artisan serve
+```
+Akses aplikasi melalui browser di: `http://127.0.0.1:8000`
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+---
 
-## Contributing
+## 🧪 Panduan Menjalankan Pengujian (Testing Suite)
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### 1. Pengujian Otomatis Default (SQLite In-Memory)
+Test suite default dikonfigurasi untuk berjalan cepat tanpa konfigurasi eksternal menggunakan SQLite in-memory:
+```bash
+php artisan test
+```
 
-## Code of Conduct
+### 2. Pengujian Terhadap Database PostgreSQL
+Tersedia konfigurasi pengujian khusus PostgreSQL yang memverifikasi constraint relational dan trigger database append-only (`activity_logs`):
+```bash
+# Pastikan PostgreSQL telah aktif dan database eoffice_testing telah dibuat
+# CREATE DATABASE eoffice_testing;
+php artisan test -c phpunit.pgsql.xml
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### 3. Pemeriksaan Statis Kode (Lint & Typecheck)
+```bash
+# Pemeriksaan tipe TypeScript frontend
+npm run typecheck
 
-## Security Vulnerabilities
+# Pemeriksaan ESLint frontend
+npm run lint
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+# Pemeriksaan standar kode PHP Pint
+vendor/bin/pint --test
+```
 
-## License
+---
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## 👥 Daftar Akun Percontohan Demo (Politeknik Contoh)
+
+Semua akun demo di bawah ini menggunakan kata sandi standar: `password`
+
+| Peran (Role) | Nama Pegawai | Alamat Email | Jabatan Struktural / Unit | Hak Akses Utama |
+| :--- | :--- | :--- | :--- | :--- |
+| **Admin Instansi** | Administrator Instansi | `admin@contoh.ac.id` | Bagian IT & Administrasi Sistem | Kelola unit kerja, jabatan, master pengguna, kuota lisensi |
+| **Pimpinan** | Dr. Ir. Budi Santoso, M.T. | `direktur@contoh.ac.id` | Direktur (Level 1) | Tanda tangan elektronik (TTE), verifikasi surat, disposisi |
+| **Pimpinan** | Prof. Dr. Ir. Haryanto, M.Eng. | `wadir1@contoh.ac.id` | Wakil Direktur Bidang Akademik (Level 2) | Disposisi, verifikasi naskah, penerima delegasi/Plt |
+| **Kepala Unit** | Drs. Hendra Permana, M.Kom. | `kajur.jtk@contoh.ac.id` | Ketua Jurusan Teknik Komputer & Informatika | Menerima & meneruskan disposisi, verifikasi surat keluar |
+| **Staf TU** | Siti Rahayu, A.Md. | `tu@contoh.ac.id` | Staf Tata Usaha Persuratan | Registrasi surat masuk/keluar, penomoran agenda, pembatalan |
+| **Petugas Arsip** | Agus Budiman, S.Sos. | `arsip@contoh.ac.id` | Petugas Arsip Dinamis | Klasifikasi arsip, pemberkasan, retensi, penyusutan |
+
+---
+
+## 🛡️ Keamanan & Kepatuhan
+1. **Audit Log Append-Only**: Tabel `activity_logs` dilindungi trigger level database (`BEFORE UPDATE OR DELETE`) yang menolak segala bentuk modifikasi atau manipulasi riwayat jejak audit secara langsung via SQL.
+2. **Entitlement Lisensi & Mode Baca-Saja**: Jika masa lisensi berakhir, sistem otomatis beralih ke mode baca-saja (*read-only*), memblokir mutasi baru sementara tetap mengizinkan login, logout, pencarian, dan ekspor data secara penuh.
+3. **RBAC Granular**: Setiap mutasi dilindungi perpaduan spatie permissions (`surat-masuk.registrasi`, `surat-masuk.batalkan`, dsb.) dan Laravel Policies.

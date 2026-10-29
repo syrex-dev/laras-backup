@@ -11,6 +11,8 @@ use App\Http\Controllers\Operations\BackupController;
 use App\Http\Controllers\Operations\RecycleBinController;
 use App\Http\Controllers\Organization\InstitutionProfileController;
 use App\Http\Controllers\Organization\OrganizationProfileController;
+use App\Http\Controllers\Organization\OrgUnitController;
+use App\Http\Controllers\Organization\PositionController;
 use App\Http\Controllers\Organization\TandaTanganController;
 use App\Http\Controllers\Organization\UserController;
 use App\Http\Controllers\Setup\SetupWizardController;
@@ -103,10 +105,13 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('disposisi', DisposisiController::class)->only(['index', 'show']);
     Route::patch('/disposisi/{disposisi}/status', [DisposisiController::class, 'updateStatus'])->name('disposisi.update-status');
 
-    // Pengaturan Profil Instansi & Kamus Istilah Dinamis (Admin)
+    // Pengaturan & Master Organisasi (Admin Instansi & Admin)
     Route::middleware(['role:Admin|Admin Instansi'])->group(function () {
         Route::get('/pengaturan/profil', [InstitutionProfileController::class, 'edit'])->name('pengaturan.profil.edit');
         Route::put('/pengaturan/profil', [InstitutionProfileController::class, 'update'])->name('pengaturan.profil.update');
+        Route::resource('users', UserController::class);
+        Route::resource('unit-kerja', OrgUnitController::class);
+        Route::resource('jabatan', PositionController::class);
     });
 
     // Admin Suite (Eksklusif: Admin)
@@ -125,11 +130,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/recycle-bin', [RecycleBinController::class, 'index'])->name('recycle-bin.index');
         Route::post('/recycle-bin/{type}/{id}/restore', [RecycleBinController::class, 'restore'])->name('recycle-bin.restore');
         Route::delete('/recycle-bin/{type}/{id}/force-delete', [RecycleBinController::class, 'forceDelete'])->name('recycle-bin.force-delete');
-    });
-
-    // User Management
-    Route::middleware(['role:Admin'])->group(function () {
-        Route::resource('users', UserController::class);
     });
 
     // Template Surat Management
