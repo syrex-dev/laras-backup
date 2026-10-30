@@ -190,3 +190,22 @@ laras/
    - Komponen UI tidak menulis kata statis "Jurusan" atau "Kajur". Melainkan memanggil `term('unit_level_1', 'Jurusan')` atau `term('lead_level_1', 'Ketua Jurusan')`.
 3. **Optimistic & Mobile-First Interaction:**
    - Aksi disposisi dan persetujuan dilengkapi *action drawer* mobile dengan indikator loading cepat dan konfirmasi jelas untuk aksi destruktif/kunci.
+
+---
+
+## 5. Kebijakan Keamanan HTTP & Header Proteksi
+
+Aplikasi E-Office menerapkan header keamanan HTTP standar industri secara terpusat melalui `SecurityHeadersMiddleware`:
+
+1. **Content-Security-Policy (CSP):**
+   - Mengendalikan sumber daya yang diizinkan untuk dimuat dan dieksekusi browser.
+   - **Kompatibilitas Vite & Inertia:** Mengizinkan `'self'` serta host Vite (`http://localhost:*`, `http://127.0.0.1:*`, websocket `ws://*`) untuk mendukung *hot-module reloading* pada lingkungan pengembangan tanpa mengorbankan isolasi naskah.
+   - **Isolasi Plugin Eksternal:** Menetapkan `object-src 'none'` untuk mematikan plugin lawas berbahaya (Flash/Java), `base-uri 'self'`, dan `form-action 'self'`.
+   - **Font & Style:** Mengizinkan font lokal dan Google Fonts resmi (`fonts.googleapis.com`, `fonts.gstatic.com`).
+2. **X-Content-Type-Options (`nosniff`):**
+   - Mencegah browser melakukan MIME-type sniffing yang dapat mengeksekusi lampiran berkas yang diunggah pengguna sebagai skrip web.
+3. **Referrer-Policy (`strict-origin-when-cross-origin`):**
+   - Melindungi kerahasiaan URL naskah dinas internal agar token atau ID dokumen tidak bocor saat pengguna membuka tautan eksternal.
+4. **X-Frame-Options (`SAMEORIGIN`):**
+   - Mencegah serangan *clickjacking* dengan melarang embedding aplikasi di dalam `<iframe>` pihak ketiga di luar domain instansi.
+
