@@ -7,6 +7,7 @@ use App\Domain\Lisensi\Models\LicenseState;
 use App\Domain\SuratKeluar\Models\SuratKeluar;
 use App\Domain\SuratKeluar\Models\SuratKeluarAttachment;
 use App\Domain\SuratKeluar\Models\SuratKeluarVersion;
+use App\Domain\SuratKeluar\Models\TemplateSurat;
 use App\Domain\SuratMasuk\Models\SuratMasukAttachment;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
@@ -50,12 +51,19 @@ class SaveDraftSuratKeluarAction
 
     protected function createDraft(User $actor, array $data, array $files): SuratKeluar
     {
+        $templateId = $data['template_id'] ?? null;
+        if ($templateId && ! TemplateSurat::where('id', $templateId)->exists()) {
+            $templateId = null;
+        }
+
         $suratKeluar = SuratKeluar::create([
-            'template_id' => $data['template_id'] ?? null,
+            'template_id' => $templateId,
+            'templat_surat_id' => $data['templat_surat_id'] ?? null,
             'klasifikasi_id' => $data['klasifikasi_id'],
             'org_unit_id' => $data['org_unit_id'] ?? $actor->position?->org_unit_id,
             'user_id' => $actor->id,
-            'penandatangan_id' => $data['penandatangan_id'] ?? null,
+            'penandatangan_id' => $data['penandatangan_id'] ?? $data['penyetuju_id'] ?? null,
+            'penyetuju_id' => $data['penyetuju_id'] ?? $data['penandatangan_id'] ?? null,
             'reply_to_surat_masuk_id' => $data['reply_to_surat_masuk_id'] ?? null,
             'tujuan' => $data['tujuan'],
             'perihal' => $data['perihal'],
@@ -65,7 +73,7 @@ class SaveDraftSuratKeluarAction
             'status' => SuratKeluar::STATUS_DRAF,
             'status_approval' => 'draft',
             'metadata' => $data['metadata'] ?? [],
-            'qr_token' => Str::random(32),
+            'qr_token' => $data['qr_token'] ?? null,
             'lampiran' => $data['lampiran'] ?? null,
         ]);
 

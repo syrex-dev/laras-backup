@@ -47,6 +47,7 @@ class TemplateSuratTest extends TestCase
         ]);
         $this->staffUser->assignRole($roleStaff);
 
+        InstitutionProfile::query()->delete();
         InstitutionProfile::create([
             'name' => 'Politeknik Negeri Contoh',
             'alias' => 'PNC',

@@ -62,6 +62,9 @@ class SuratKeluar extends Model
         'qr_token',
         'file_pdf',
         'lampiran',
+        'templat_surat_id',
+        'penyetuju_id',
+        'path_qrcode',
     ];
 
     protected $casts = [
@@ -168,12 +171,11 @@ class SuratKeluar extends Model
 
     public function getTemplatSuratIdAttribute(): ?int
     {
-        return $this->attributes['template_id'] ?? null;
+        return $this->attributes['templat_surat_id'] ?? $this->attributes['template_id'] ?? null;
     }
 
     public function setTemplatSuratIdAttribute($value): void
     {
-        $this->attributes['template_id'] = $value;
         if (\Illuminate\Support\Facades\Schema::hasColumn($this->getTable(), 'templat_surat_id')) {
             $this->attributes['templat_surat_id'] = $value;
         }

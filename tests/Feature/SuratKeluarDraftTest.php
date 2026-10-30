@@ -69,6 +69,7 @@ class SuratKeluarDraftTest extends TestCase
             'konten_default' => '<p>Nomor: {nomor_surat}</p><p>Kepada: {tujuan}</p>',
         ]);
 
+        LicenseState::query()->delete();
         LicenseState::create([
             'license_key' => 'LIC-TEST-ACTIVE',
             'institution_slug' => 'poltek-demo',

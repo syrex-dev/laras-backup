@@ -15,13 +15,14 @@ class SuratKeluarPolicy
         return $user->can('surat-keluar.lihat') ||
                $user->can('surat-keluar.buat') ||
                $user->can('surat-keluar.periksa') ||
-               $user->can('surat-keluar.kelola');
+               $user->can('surat-keluar.kelola') ||
+               $user->hasRole(['Admin', 'Sekretaris', 'Pimpinan', 'Admin Instansi']);
     }
 
     public function view(User $user, SuratKeluar $suratKeluar): bool
     {
         // Admin pengelola surat keluar selalu berhak
-        if ($user->can('surat-keluar.kelola')) {
+        if ($user->can('surat-keluar.kelola') || $user->hasRole(['Admin', 'Admin Instansi'])) {
             return true;
         }
 
@@ -31,7 +32,7 @@ class SuratKeluarPolicy
         }
 
         // Pejabat penandatangan
-        if ($suratKeluar->penandatangan_id === $user->id) {
+        if ($suratKeluar->penandatangan_id === $user->id || $suratKeluar->penyetuju_id === $user->id) {
             return true;
         }
 
@@ -58,12 +59,14 @@ class SuratKeluarPolicy
 
     public function create(User $user): bool
     {
-        return $user->can('surat-keluar.buat') || $user->can('surat-keluar.kelola');
+        return $user->can('surat-keluar.buat') ||
+               $user->can('surat-keluar.kelola') ||
+               $user->hasRole(['Admin', 'Sekretaris', 'Admin Instansi']);
     }
 
     public function update(User $user, SuratKeluar $suratKeluar): bool
     {
-        if ($user->can('surat-keluar.kelola')) {
+        if ($user->can('surat-keluar.kelola') || $user->hasRole(['Admin', 'Sekretaris', 'Admin Instansi'])) {
             return $suratKeluar->canBeEdited();
         }
 
@@ -73,7 +76,7 @@ class SuratKeluarPolicy
 
     public function delete(User $user, SuratKeluar $suratKeluar): bool
     {
-        if ($user->can('surat-keluar.kelola')) {
+        if ($user->can('surat-keluar.kelola') || $user->hasRole(['Admin', 'Sekretaris', 'Admin Instansi'])) {
             return $suratKeluar->status === SuratKeluar::STATUS_DRAF;
         }
 
