@@ -132,8 +132,8 @@ class SuratMasukController extends Controller
             ->latest('id')
             ->get();
 
-        // Ambil rantai pohon disposisi berjenjang
-        $disposisiChain = \App\Domain\Disposisi\Models\Disposisi::with([
+        // Ambil rantai pohon disposisi berjenjang yang hanya boleh dilihat oleh pengguna (lolos Policy view)
+        $rawDisposisiChain = \App\Domain\Disposisi\Models\Disposisi::with([
             'pemberi',
             'pemberiPosition',
             'recipients.recipientUser',
@@ -145,6 +145,11 @@ class SuratMasukController extends Controller
         ->where('surat_masuk_id', $suratMasuk->id)
         ->orderBy('created_at', 'asc')
         ->get();
+
+        $currentUser = $request->user();
+        $disposisiChain = $rawDisposisiChain->filter(function ($disposisi) use ($currentUser) {
+            return Gate::forUser($currentUser)->allows('view', $disposisi);
+        })->values();
 
         if ($request->has('legacy_view')) {
             return view('letters.surat-masuk.show', compact('suratMasuk'));

@@ -76,7 +76,7 @@ class FollowupDisposisiAction
         }
 
         // 4. Eksekusi database transaction
-        return DB::transaction(function () use ($user, $recipient, $data, $status, $catatan, $attachment) {
+        return DB::transaction(function () use ($user, $recipient, $data, $status, $catatan, $attachment, $isRecipient, $isGlobalAdmin, $effectiveUser) {
             // Update recipient
             $recipientUpdates = [
                 'status' => $status,
@@ -145,17 +145,22 @@ class FollowupDisposisiAction
             }
 
             // 6. Jejak Audit
+            $isActingOnBehalf = ! $isRecipient && $isGlobalAdmin;
+            $atasNamaNote = $isActingOnBehalf
+                ? ' (atas nama '.($effectiveUser?->name ?? 'Penerima Disposisi').')'
+                : '';
             $pltInfo = $recipient->is_delegated ? " (selaku Plt {$recipient->recipientPosition?->name})" : '';
             AuditLogger::log(
                 action: 'disposisi.followup',
                 subject: $recipient,
-                description: "Menindaklanjuti disposisi naskah: status {$status}{$pltInfo}",
+                description: "Menindaklanjuti disposisi naskah: status {$status}{$pltInfo}{$atasNamaNote}",
                 properties: [
                     'disposisi_id' => $disposisi->id,
                     'surat_masuk_id' => $disposisi->surat_masuk_id,
                     'status' => $status,
                     'catatan' => $catatan,
                     'has_attachment' => $attachment !== null,
+                    'atas_nama' => $isActingOnBehalf ? ($effectiveUser?->name ?? 'Penerima Disposisi') : null,
                 ],
                 causer: $user
             );

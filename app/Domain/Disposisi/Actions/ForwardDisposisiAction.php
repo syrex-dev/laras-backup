@@ -236,7 +236,7 @@ class ForwardDisposisiAction
         }
 
         // 7. Eksekusi Database Transaction
-        return DB::transaction(function () use ($sender, $parentRecipient, $data, $instruksi, $resolvedRecipients) {
+        return DB::transaction(function () use ($sender, $parentRecipient, $data, $instruksi, $resolvedRecipients, $isRecipientUser, $isGlobalAdmin, $effectiveUser) {
             $parentDisposisi = $parentRecipient->disposisi;
 
             $childDisposisi = Disposisi::create([
@@ -287,15 +287,21 @@ class ForwardDisposisiAction
             }
 
             // Jejak Audit
+            $isActingOnBehalf = ! $isRecipientUser && $isGlobalAdmin;
+            $atasNamaNote = $isActingOnBehalf
+                ? ' (atas nama '.($effectiveUser?->name ?? 'Penerima Disposisi').')'
+                : '';
+
             AuditLogger::log(
                 action: 'disposisi.forwarded',
                 subject: $childDisposisi,
-                description: "Meneruskan disposisi naskah ke ".count($resolvedRecipients).' bawahan',
+                description: "Meneruskan disposisi naskah ke ".count($resolvedRecipients)." bawahan{$atasNamaNote}",
                 properties: [
                     'parent_disposisi_id' => $parentDisposisi->id,
                     'parent_recipient_id' => $parentRecipient->id,
                     'surat_masuk_id' => $parentDisposisi->surat_masuk_id,
                     'recipients_count' => count($resolvedRecipients),
+                    'atas_nama' => $isActingOnBehalf ? ($effectiveUser?->name ?? 'Penerima Disposisi') : null,
                 ],
                 causer: $sender
             );

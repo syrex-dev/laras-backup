@@ -6,6 +6,7 @@ use App\Domain\Disposisi\Models\Disposisi;
 use App\Domain\Disposisi\Models\DisposisiRecipient;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
+use Illuminate\Support\Facades\Log;
 
 class DisposisiPolicy
 {
@@ -16,24 +17,22 @@ class DisposisiPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('disposisi.lihat');
+        return $user->can('disposisi.lihat') || $user->can('disposisi.kelola');
     }
 
     /**
-     * Hak akses melihat detail satu naskah disposisi tertentu
+     * Hak akses melihat detail satu lembar disposisi tertentu
+     * Terpisah tegas dari viewAny dan wajib menerima instance Disposisi.
      */
-    public function view(User $user, ?Disposisi $disposisi = null): bool
+    public function view(User $user, Disposisi $disposisi): bool
     {
-        if (! $user->can('disposisi.lihat')) {
-            return false;
-        }
-
+        // Permission 'kelola' hanya untuk Admin Instansi (akses audit & pengelolaan penuh)
         if ($user->can('disposisi.kelola')) {
             return true;
         }
 
-        if (! $disposisi) {
-            return true;
+        if (! $user->can('disposisi.lihat')) {
+            return false;
         }
 
         // Pembuat disposisi selalu berhak melihat
@@ -43,22 +42,39 @@ class DisposisiPolicy
 
         // Penerima aktif, penerima Plt, maupun pemegang jabatan definitif asli (baca-saja) berhak melihat
         $isRecipientOrOriginal = $disposisi->recipients->contains(function (DisposisiRecipient $rec) use ($user) {
-            return $rec->effectiveUser()?->id === $user->id || ($rec->is_delegated && $rec->recipient_user_id === $user->id);
+            return $rec->effectiveUser()?->id === $user->id ||
+                   ($rec->is_delegated && $rec->recipient_user_id === $user->id);
         });
 
         if ($isRecipientOrOriginal) {
             return true;
         }
 
-        // Periksa rantai leluhur disposisi jika merupakan hasil penerusan
+        // Periksa rantai leluhur disposisi jika merupakan hasil penerusan berjenjang
+        // Batasi kedalaman maksimal 20 tingkat untuk mencegah circular loop dan memory exhaustion
         $parent = $disposisi->parentDisposisi;
+        $depth = 0;
+
         while ($parent) {
+            $depth++;
+            if ($depth > 20) {
+                Log::warning("DisposisiPolicy: batas penelusuran leluhur terlampaui (> 20) pada disposisi ID: {$disposisi->id}", [
+                    'disposisi_id' => $disposisi->id,
+                    'user_id' => $user->id,
+                    'depth' => $depth,
+                ]);
+
+                return false;
+            }
+
             if ($parent->pemberi_id === $user->id) {
                 return true;
             }
+
             if ($parent->recipients->contains(fn ($r) => $r->effectiveUser()?->id === $user->id || ($r->is_delegated && $r->recipient_user_id === $user->id))) {
                 return true;
             }
+
             $parent = $parent->parentDisposisi;
         }
 
@@ -70,7 +86,7 @@ class DisposisiPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('disposisi.buat');
+        return $user->can('disposisi.buat') || $user->can('disposisi.kelola');
     }
 
     /**
@@ -78,15 +94,15 @@ class DisposisiPolicy
      */
     public function forward(User $user, ?DisposisiRecipient $recipient = null): bool
     {
+        if ($user->can('disposisi.kelola')) {
+            return true;
+        }
+
         if (! $user->can('disposisi.teruskan')) {
             return false;
         }
 
         if ($recipient) {
-            if ($user->can('disposisi.kelola')) {
-                return true;
-            }
-
             return $recipient->effectiveUser()?->id === $user->id;
         }
 
@@ -98,15 +114,15 @@ class DisposisiPolicy
      */
     public function followup(User $user, ?DisposisiRecipient $recipient = null): bool
     {
+        if ($user->can('disposisi.kelola')) {
+            return true;
+        }
+
         if (! $user->can('disposisi.tindaklanjut')) {
             return false;
         }
 
         if ($recipient) {
-            if ($user->can('disposisi.kelola')) {
-                return true;
-            }
-
             return $recipient->effectiveUser()?->id === $user->id;
         }
 

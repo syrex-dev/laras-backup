@@ -60,6 +60,11 @@ class Disposisi extends Model
         return $this->belongsTo(self::class, 'parent_disposisi_id');
     }
 
+    public function parentDisposisi(): BelongsTo
+    {
+        return $this->parent();
+    }
+
     public function children(): HasMany
     {
         return $this->hasMany(self::class, 'parent_disposisi_id');
