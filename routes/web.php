@@ -130,6 +130,8 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('users', UserController::class);
         Route::resource('unit-kerja', OrgUnitController::class);
         Route::resource('jabatan', PositionController::class);
+        Route::post('/surat-keluar/templates/preview', [\App\Http\Controllers\SuratKeluar\TemplateSuratController::class, 'preview'])->name('surat-keluar.templates.preview');
+        Route::resource('surat-keluar/templates', \App\Http\Controllers\SuratKeluar\TemplateSuratController::class)->names('surat-keluar.templates');
     });
 
     // Admin Suite (Eksklusif: Admin)

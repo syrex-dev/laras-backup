@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
             ProfilOrganisasiSeeder::class,
             PoliteknikDemoSeeder::class,
             InstructionTemplateSeeder::class,
+            TemplateSuratSeeder::class,
             SuratMasukDemoSeeder::class,
             DisposisiDemoSeeder::class,
             SuratSeeder::class,
