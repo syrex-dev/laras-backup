@@ -26,12 +26,6 @@ class RejectSuratKeluarAction
         SuratKeluar $suratKeluar,
         string $alasan
     ): SuratKeluar {
-        if ($suratKeluar->status !== SuratKeluar::STATUS_DIPERIKSA) {
-            throw ValidationException::withMessages([
-                'status' => "Surat keluar berstatus '{$suratKeluar->status}' tidak dapat ditolak.",
-            ]);
-        }
-
         $trimmedAlasan = trim($alasan);
         if (empty($trimmedAlasan)) {
             throw ValidationException::withMessages([
@@ -39,23 +33,40 @@ class RejectSuratKeluarAction
             ]);
         }
 
-        $currentApproval = $suratKeluar->currentApproval();
-        if (! $currentApproval) {
-            throw ValidationException::withMessages([
-                'approval' => 'Tidak ditemukan tahapan pemeriksaan aktif untuk surat keluar ini.',
-            ]);
-        }
+        return DB::transaction(function () use ($actor, $suratKeluar, $trimmedAlasan) {
+            // 1. Kunci baris surat keluar
+            /** @var SuratKeluar $lockedSurat */
+            $lockedSurat = SuratKeluar::where('id', $suratKeluar->id)->lockForUpdate()->firstOrFail();
 
-        $effectiveUser = $currentApproval->effectiveUser();
-        $isAuthorized = ($effectiveUser && $effectiveUser->id === $actor->id) || $actor->can('surat-keluar.kelola');
+            if ($lockedSurat->status !== SuratKeluar::STATUS_DIPERIKSA) {
+                throw ValidationException::withMessages([
+                    'status' => "Surat keluar berstatus '{$lockedSurat->status}' tidak dapat ditolak.",
+                ]);
+            }
 
-        if (! $isAuthorized) {
-            throw ValidationException::withMessages([
-                'authorization' => 'Anda bukan penanggung jawab giliran aktif untuk tahapan pemeriksaan ini.',
-            ]);
-        }
+            // 2. Kunci baris approval giliran aktif
+            /** @var SuratKeluarApproval|null $currentApproval */
+            $currentApproval = $lockedSurat->approvals()
+                ->where('step_order', $lockedSurat->current_approval_step)
+                ->lockForUpdate()
+                ->first();
 
-        return DB::transaction(function () use ($actor, $suratKeluar, $currentApproval, $trimmedAlasan) {
+            if (! $currentApproval || $currentApproval->status !== SuratKeluarApproval::STATUS_MENUNGGU) {
+                throw ValidationException::withMessages([
+                    'approval' => 'Tidak ditemukan tahapan pemeriksaan aktif untuk surat keluar ini.',
+                ]);
+            }
+
+            // 3. Validasi ulang otorisasi setelah terkunci
+            $effectiveUser = $currentApproval->effectiveUser();
+            $isAuthorized = ($effectiveUser && $effectiveUser->id === $actor->id) || $actor->can('surat-keluar.kelola');
+
+            if (! $isAuthorized) {
+                throw ValidationException::withMessages([
+                    'authorization' => 'Anda bukan penanggung jawab giliran aktif untuk tahapan pemeriksaan ini.',
+                ]);
+            }
+
             $currentApproval->update([
                 'status' => SuratKeluarApproval::STATUS_DITOLAK,
                 'catatan' => $trimmedAlasan,
@@ -64,17 +75,17 @@ class RejectSuratKeluarAction
             ]);
 
             // Transisi status surat ke 'ditolak'
-            $suratKeluar->update([
+            $lockedSurat->update([
                 'status' => SuratKeluar::STATUS_DITOLAK,
                 'status_approval' => 'rejected',
                 'alasan_tolak' => $trimmedAlasan,
             ]);
 
             // Kirim notifikasi ke pembuat surat
-            $creator = $suratKeluar->pembuat;
+            $creator = $lockedSurat->pembuat;
             if ($creator) {
                 $creator->notify(new SuratKeluarApprovalNotification(
-                    $suratKeluar,
+                    $lockedSurat,
                     $currentApproval,
                     'rejected',
                     $trimmedAlasan
@@ -83,11 +94,11 @@ class RejectSuratKeluarAction
 
             $this->auditLogger->log(
                 'surat_keluar.reject',
-                $suratKeluar,
-                "Menolak draf surat keluar '{$suratKeluar->perihal}'. Alasan: {$trimmedAlasan}"
+                $lockedSurat,
+                "Menolak draf surat keluar '{$lockedSurat->perihal}'. Alasan: {$trimmedAlasan}"
             );
 
-            return $suratKeluar->fresh(['approvals', 'versions']);
+            return $lockedSurat->fresh(['approvals', 'versions']);
         });
     }
 }

@@ -27,36 +27,39 @@ class SubmitSuratKeluarAction
         SuratKeluar $suratKeluar,
         array $approvalsData = []
     ): SuratKeluar {
-        if (! $suratKeluar->canBeEdited()) {
-            throw ValidationException::withMessages([
-                'status' => "Surat keluar dengan status '{$suratKeluar->status}' tidak dapat diajukan.",
-            ]);
-        }
-
         return DB::transaction(function () use ($actor, $suratKeluar, $approvalsData) {
+            /** @var SuratKeluar $lockedSurat */
+            $lockedSurat = SuratKeluar::where('id', $suratKeluar->id)->lockForUpdate()->firstOrFail();
+
+            if (! $lockedSurat->canBeEdited()) {
+                throw ValidationException::withMessages([
+                    'status' => "Surat keluar dengan status '{$lockedSurat->status}' tidak dapat diajukan.",
+                ]);
+            }
+
             // 1. Inisialisasi atau konfigurasi ulang rantai persetujuan jika disediakan
             if (! empty($approvalsData)) {
-                $this->setupApprovalChain($suratKeluar, $approvalsData);
-            } elseif ($suratKeluar->approvals()->count() === 0) {
-                $this->setupDefaultApprovalChain($suratKeluar);
+                $this->setupApprovalChain($lockedSurat, $approvalsData);
+            } elseif ($lockedSurat->approvals()->count() === 0) {
+                $this->setupDefaultApprovalChain($lockedSurat);
             }
 
             // Pastikan ada minimal 1 tahap persetujuan
-            if ($suratKeluar->approvals()->count() === 0) {
+            if ($lockedSurat->approvals()->count() === 0) {
                 throw ValidationException::withMessages([
                     'approvals' => 'Alur persetujuan surat keluar wajib memiliki minimal satu pejabat penandatangan.',
                 ]);
             }
 
             // 2. Transisi status surat ke 'diperiksa'
-            $suratKeluar->update([
+            $lockedSurat->update([
                 'status' => SuratKeluar::STATUS_DIPERIKSA,
                 'status_approval' => 'diperiksa',
                 'current_approval_step' => 1,
             ]);
 
             // 3. Reset status step pertama menjadi menunggu
-            $firstStep = $suratKeluar->approvals()->where('step_order', 1)->first();
+            $firstStep = $lockedSurat->approvals()->where('step_order', 1)->lockForUpdate()->first();
             if ($firstStep) {
                 $firstStep->update([
                     'status' => SuratKeluarApproval::STATUS_MENUNGGU,
@@ -68,7 +71,7 @@ class SubmitSuratKeluarAction
                 $targetUser = $firstStep->effectiveUser();
                 if ($targetUser) {
                     $targetUser->notify(new SuratKeluarApprovalNotification(
-                        $suratKeluar,
+                        $lockedSurat,
                         $firstStep,
                         'turn_started'
                     ));
@@ -77,11 +80,11 @@ class SubmitSuratKeluarAction
 
             $this->auditLogger->log(
                 'surat_keluar.submit',
-                $suratKeluar,
-                "Mengajukan draf '{$suratKeluar->perihal}' ke alur pemeriksaan berjenjang"
+                $lockedSurat,
+                "Mengajukan draf '{$lockedSurat->perihal}' ke alur pemeriksaan berjenjang"
             );
 
-            return $suratKeluar->fresh(['approvals.user', 'approvals.position', 'versions']);
+            return $lockedSurat->fresh(['approvals.user', 'approvals.position', 'versions']);
         });
     }
 

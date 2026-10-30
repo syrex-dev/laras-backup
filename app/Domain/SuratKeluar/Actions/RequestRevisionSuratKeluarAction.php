@@ -26,12 +26,6 @@ class RequestRevisionSuratKeluarAction
         SuratKeluar $suratKeluar,
         string $catatan
     ): SuratKeluar {
-        if ($suratKeluar->status !== SuratKeluar::STATUS_DIPERIKSA) {
-            throw ValidationException::withMessages([
-                'status' => "Surat keluar berstatus '{$suratKeluar->status}' tidak dapat diminta revisi.",
-            ]);
-        }
-
         $trimmedCatatan = trim($catatan);
         if (empty($trimmedCatatan)) {
             throw ValidationException::withMessages([
@@ -39,23 +33,40 @@ class RequestRevisionSuratKeluarAction
             ]);
         }
 
-        $currentApproval = $suratKeluar->currentApproval();
-        if (! $currentApproval) {
-            throw ValidationException::withMessages([
-                'approval' => 'Tidak ditemukan tahapan pemeriksaan aktif untuk surat keluar ini.',
-            ]);
-        }
+        return DB::transaction(function () use ($actor, $suratKeluar, $trimmedCatatan) {
+            // 1. Kunci baris surat keluar
+            /** @var SuratKeluar $lockedSurat */
+            $lockedSurat = SuratKeluar::where('id', $suratKeluar->id)->lockForUpdate()->firstOrFail();
 
-        $effectiveUser = $currentApproval->effectiveUser();
-        $isAuthorized = ($effectiveUser && $effectiveUser->id === $actor->id) || $actor->can('surat-keluar.kelola');
+            if ($lockedSurat->status !== SuratKeluar::STATUS_DIPERIKSA) {
+                throw ValidationException::withMessages([
+                    'status' => "Surat keluar berstatus '{$lockedSurat->status}' tidak dapat diminta revisi.",
+                ]);
+            }
 
-        if (! $isAuthorized) {
-            throw ValidationException::withMessages([
-                'authorization' => 'Anda bukan penanggung jawab giliran aktif untuk tahapan pemeriksaan ini.',
-            ]);
-        }
+            // 2. Kunci baris approval giliran aktif
+            /** @var SuratKeluarApproval|null $currentApproval */
+            $currentApproval = $lockedSurat->approvals()
+                ->where('step_order', $lockedSurat->current_approval_step)
+                ->lockForUpdate()
+                ->first();
 
-        return DB::transaction(function () use ($actor, $suratKeluar, $currentApproval, $trimmedCatatan) {
+            if (! $currentApproval || $currentApproval->status !== SuratKeluarApproval::STATUS_MENUNGGU) {
+                throw ValidationException::withMessages([
+                    'approval' => 'Tidak ditemukan tahapan pemeriksaan aktif untuk surat keluar ini.',
+                ]);
+            }
+
+            // 3. Validasi ulang otorisasi setelah baris terkunci
+            $effectiveUser = $currentApproval->effectiveUser();
+            $isAuthorized = ($effectiveUser && $effectiveUser->id === $actor->id) || $actor->can('surat-keluar.kelola');
+
+            if (! $isAuthorized) {
+                throw ValidationException::withMessages([
+                    'authorization' => 'Anda bukan penanggung jawab giliran aktif untuk tahapan pemeriksaan ini.',
+                ]);
+            }
+
             $currentApproval->update([
                 'status' => SuratKeluarApproval::STATUS_REVISI,
                 'catatan' => $trimmedCatatan,
@@ -64,17 +75,17 @@ class RequestRevisionSuratKeluarAction
             ]);
 
             // Kembalikan status surat ke 'revisi'
-            $suratKeluar->update([
+            $lockedSurat->update([
                 'status' => SuratKeluar::STATUS_REVISI,
                 'status_approval' => 'draft',
                 'catatan_revisi' => $trimmedCatatan,
             ]);
 
             // Kirim notifikasi ke pembuat surat
-            $creator = $suratKeluar->pembuat;
+            $creator = $lockedSurat->pembuat;
             if ($creator) {
                 $creator->notify(new SuratKeluarApprovalNotification(
-                    $suratKeluar,
+                    $lockedSurat,
                     $currentApproval,
                     'revision_requested',
                     $trimmedCatatan
@@ -83,11 +94,11 @@ class RequestRevisionSuratKeluarAction
 
             $this->auditLogger->log(
                 'surat_keluar.request_revision',
-                $suratKeluar,
-                "Meminta revisi pada draf '{$suratKeluar->perihal}'. Catatan: {$trimmedCatatan}"
+                $lockedSurat,
+                "Meminta revisi pada draf '{$lockedSurat->perihal}'. Catatan: {$trimmedCatatan}"
             );
 
-            return $suratKeluar->fresh(['approvals', 'versions']);
+            return $lockedSurat->fresh(['approvals', 'versions']);
         });
     }
 }
