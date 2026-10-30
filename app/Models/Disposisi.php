@@ -2,44 +2,12 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Model;
+use App\Domain\Disposisi\Models\Disposisi as DomainDisposisi;
 
 /**
- * @mixin Builder
+ * Backward compatibility wrapper for App\Domain\Disposisi\Models\Disposisi
  */
-class Disposisi extends Model
+class Disposisi extends DomainDisposisi
 {
-    protected $table = 'disposisi';
-
-    protected $fillable = [
-        'surat_masuk_id',
-        'pengirim_id',
-        'penerima_id',
-        'instruksi',
-        'prioritas',
-        'status',
-        'dibaca_pada',
-        'selesai_pada',
-    ];
-
-    protected $casts = [
-        'dibaca_pada' => 'datetime',
-        'selesai_pada' => 'datetime',
-    ];
-
-    public function suratMasuk()
-    {
-        return $this->belongsTo(SuratMasuk::class);
-    }
-
-    public function pengirim()
-    {
-        return $this->belongsTo(User::class, 'pengirim_id');
-    }
-
-    public function penerima()
-    {
-        return $this->belongsTo(User::class, 'penerima_id');
-    }
+    // Inherits all domain methods, relationships, and constants
 }
