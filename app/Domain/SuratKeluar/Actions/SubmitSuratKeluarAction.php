@@ -94,7 +94,8 @@ class SubmitSuratKeluarAction
 
         // Validasi tahap terakhir harus berupa penandatangan
         $lastItem = end($approvalsData);
-        if (($lastItem['role_type'] ?? '') !== SuratKeluarApproval::ROLE_PENANDATANGAN) {
+        $lastRole = $lastItem['role_type'] ?? $lastItem['tipe'] ?? '';
+        if ($lastRole !== SuratKeluarApproval::ROLE_PENANDATANGAN) {
             throw ValidationException::withMessages([
                 'approvals' => 'Tahap akhir pada alur pemeriksaan wajib berkedudukan sebagai penandatangan.',
             ]);
@@ -124,7 +125,7 @@ class SubmitSuratKeluarAction
             SuratKeluarApproval::create([
                 'surat_keluar_id' => $suratKeluar->id,
                 'step_order' => $stepOrder,
-                'role_type' => $step['role_type'] ?? SuratKeluarApproval::ROLE_PEMERIKSA,
+                'role_type' => $step['role_type'] ?? $step['tipe'] ?? SuratKeluarApproval::ROLE_PEMERIKSA,
                 'position_id' => $positionId,
                 'user_id' => $userId,
                 'delegated_user_id' => $delegatedUserId,

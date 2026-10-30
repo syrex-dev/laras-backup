@@ -35,6 +35,10 @@ class SaveDraftSuratKeluarAction
         // 1. Cek kuota penyimpanan lisensi bila ada berkas lampiran yang diunggah
         $this->validateStorageQuota($files);
 
+        if (! $existing && ! empty($data['id'])) {
+            $existing = SuratKeluar::find($data['id']);
+        }
+
         return DB::transaction(function () use ($actor, $data, $files, $existing) {
             if ($existing) {
                 return $this->updateDraft($actor, $existing, $data, $files);

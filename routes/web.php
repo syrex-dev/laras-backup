@@ -89,23 +89,20 @@ Route::middleware(['auth'])->group(function () {
     // Sebab resource()->only(['index','show']) mendaftarkan pola /surat-keluar/{suratKeluar}
     // yang akan menelan string literal 'create' sebagai wildcard jika urutan terbalik.
 
-    // --- Sekretaris: buat & kelola surat keluar ---
-    Route::middleware(['role:Sekretaris'])->group(function () {
-        Route::post('/surat-keluar/preview', [SuratKeluarController::class, 'preview'])->name('surat-keluar.preview');
-        Route::get('/surat-keluar/create', [SuratKeluarController::class, 'create'])->name('surat-keluar.create');
-        Route::post('/surat-keluar', [SuratKeluarController::class, 'store'])->name('surat-keluar.store');
-        Route::get('/surat-keluar/{suratKeluar}/edit', [SuratKeluarController::class, 'edit'])->name('surat-keluar.edit');
-        Route::put('/surat-keluar/{suratKeluar}', [SuratKeluarController::class, 'update'])->name('surat-keluar.update');
-        Route::delete('/surat-keluar/{suratKeluar}', [SuratKeluarController::class, 'destroy'])->name('surat-keluar.destroy');
-    });
+    // --- Surat Keluar Fase 3A (Alur Persetujuan Berjenjang & Penomoran Resmi) ---
+    Route::get('/surat-keluar/create', [SuratKeluarController::class, 'create'])->name('surat-keluar.create');
+    Route::post('/surat-keluar', [SuratKeluarController::class, 'store'])->name('surat-keluar.store');
+    Route::get('/surat-keluar/{suratKeluar}/edit', [SuratKeluarController::class, 'edit'])->name('surat-keluar.edit');
+    Route::put('/surat-keluar/{suratKeluar}', [SuratKeluarController::class, 'update'])->name('surat-keluar.update');
+    Route::delete('/surat-keluar/{suratKeluar}', [SuratKeluarController::class, 'destroy'])->name('surat-keluar.destroy');
 
-    // --- Pimpinan: approve & reject ---
-    Route::middleware(['role:Pimpinan'])->group(function () {
-        Route::patch('/surat-keluar/{suratKeluar}/approve', [SuratKeluarController::class, 'approve'])->name('surat-keluar.approve');
-        Route::patch('/surat-keluar/{suratKeluar}/reject', [SuratKeluarController::class, 'reject'])->name('surat-keluar.reject');
-    });
-
-    // --- Resource (index + show) & draft-pdf: didaftarkan TERAKHIR ---
+    Route::post('/surat-keluar/{suratKeluar}/submit', [SuratKeluarController::class, 'submit'])->name('surat-keluar.submit');
+    Route::patch('/surat-keluar/{suratKeluar}/approve', [SuratKeluarController::class, 'approve'])->name('surat-keluar.approve');
+    Route::patch('/surat-keluar/{suratKeluar}/revise', [SuratKeluarController::class, 'revise'])->name('surat-keluar.revise');
+    Route::patch('/surat-keluar/{suratKeluar}/reject', [SuratKeluarController::class, 'reject'])->name('surat-keluar.reject');
+    Route::post('/surat-keluar/{suratKeluar}/cancel', [SuratKeluarController::class, 'cancel'])->name('surat-keluar.cancel');
+    Route::get('/surat-keluar/{suratKeluar}/pdf', [SuratKeluarController::class, 'pdf'])->name('surat-keluar.pdf');
+    Route::post('/surat-keluar/{suratKeluar}/resolve-disposisi', [SuratKeluarController::class, 'resolveDisposisi'])->name('surat-keluar.resolve-disposisi');
     Route::get('/surat-keluar/{suratKeluar}/draft-pdf', [SuratKeluarController::class, 'previewDraft'])->name('surat-keluar.draft-pdf');
     Route::resource('surat-keluar', SuratKeluarController::class)->only(['index', 'show']);
 

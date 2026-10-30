@@ -142,4 +142,72 @@ class SuratKeluar extends Model
     {
         return in_array($this->status, [self::STATUS_DRAF, self::STATUS_REVISI]);
     }
+
+    public function penyetuju(): BelongsTo
+    {
+        return $this->penandatangan();
+    }
+
+    public function templatSurat(): BelongsTo
+    {
+        return $this->template();
+    }
+
+    public function getPenyetujuIdAttribute(): ?int
+    {
+        return $this->attributes['penandatangan_id'] ?? null;
+    }
+
+    public function setPenyetujuIdAttribute($value): void
+    {
+        $this->attributes['penandatangan_id'] = $value;
+        if (\Illuminate\Support\Facades\Schema::hasColumn($this->getTable(), 'penyetuju_id')) {
+            $this->attributes['penyetuju_id'] = $value;
+        }
+    }
+
+    public function getTemplatSuratIdAttribute(): ?int
+    {
+        return $this->attributes['template_id'] ?? null;
+    }
+
+    public function setTemplatSuratIdAttribute($value): void
+    {
+        $this->attributes['template_id'] = $value;
+        if (\Illuminate\Support\Facades\Schema::hasColumn($this->getTable(), 'templat_surat_id')) {
+            $this->attributes['templat_surat_id'] = $value;
+        }
+    }
+
+    /**
+     * Scope query untuk filter pencarian, status, sifat, unit, dan rentang tanggal
+     */
+    public function scopeFilter(Builder $query, array $filters): Builder
+    {
+        return $query
+            ->when(! empty($filters['search']), function ($q) use ($filters) {
+                $search = trim($filters['search']);
+                $q->where(function ($sub) use ($search) {
+                    $sub->where('perihal', 'like', "%{$search}%")
+                        ->orWhere('nomor_surat', 'like', "%{$search}%")
+                        ->orWhere('tujuan', 'like', "%{$search}%")
+                        ->orWhere('nomor_agenda', 'like', "%{$search}%");
+                });
+            })
+            ->when(! empty($filters['status']), function ($q) use ($filters) {
+                $q->where('status', $filters['status']);
+            })
+            ->when(! empty($filters['sifat']), function ($q) use ($filters) {
+                $q->where('sifat', $filters['sifat']);
+            })
+            ->when(! empty($filters['org_unit_id']), function ($q) use ($filters) {
+                $q->where('org_unit_id', $filters['org_unit_id']);
+            })
+            ->when(! empty($filters['start_date']), function ($q) use ($filters) {
+                $q->whereDate('tanggal_surat', '>=', $filters['start_date']);
+            })
+            ->when(! empty($filters['end_date']), function ($q) use ($filters) {
+                $q->whereDate('tanggal_surat', '<=', $filters['end_date']);
+            });
+    }
 }

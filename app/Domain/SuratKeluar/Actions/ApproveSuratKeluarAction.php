@@ -50,7 +50,7 @@ class ApproveSuratKeluarAction
             ]);
         }
 
-        return DB::transaction(function () use ($actor, $suratKeluar, $currentApproval, $catatan) {
+        return DB::transaction(function () use ($actor, $suratKeluar, $currentApproval, $catatan, $autoAllocateNomor) {
             $newApprovalStatus = $currentApproval->role_type === SuratKeluarApproval::ROLE_PARAF
                 ? SuratKeluarApproval::STATUS_DIPARAF
                 : SuratKeluarApproval::STATUS_DISETUJUI;
