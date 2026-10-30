@@ -58,6 +58,15 @@ app/
 * **PDF Generation Engine: `barryvdh/laravel-dompdf` (Dompdf)**
   - *Alasan Pemilihan:* Render langsung dari view Blade standar Laravel dengan dukungan CSS paged media (`@page { size: A4 portrait; margin: 15mm; }`). Sangat portabel di semua sistem operasi (Windows Herd, Linux, Docker) tanpa memerlukan browser headless (Chromium/Puppeteer) atau wkhtmltopdf yang sering terhalang kebijakan keamanan server institusi. Berkas PDF bukti terima dan lembar disposisi yang dihasilkan berukuran sangat efisien (30–80 KB) sehingga hemat penyimpanan dan cepat dimuat pada jaringan mobile.
 
+### 1.8 Matriks Otorisasi Akses & Visibilitas Disposisi (Perlindungan Anti-IDOR)
+Untuk mencegah kebocoran data antar-unit (*Insecure Direct Object References / IDOR*), visibilitas satu lembar disposisi dan berkas bukti tindak lanjut dibatasi secara ketat pada Policy:
+1. **Pembuat Disposisi (*Pemberi*):** Pengguna dengan `disposisi.buat` yang menerbitkan lembar disposisi (`pemberi_id = user.id`) berhak melihat naskah dan memantau status pelaksanaan seluruh penerima di bawahnya.
+2. **Penerima Disposisi (*Definitif & Plt*):** Pengguna yang ditunjuk (`recipient_user_id = user.id`) atau pejabat pelaksana tugas aktif (`delegated_user_id = user.id`) berhak melihat lembar disposisi, mengunduh lampiran asli & lampiran bukti, serta memberikan catatan tindak lanjut.
+3. **Rantai Leluhur (*Ancestor Chain*):** Pejabat atasan dalam rantai hierarki penerusan (misal: Direktur yang mendisposisikan ke Kajur, lalu diteruskan ke Kaprodi) tetap berhak melihat perkembangan disposisi tingkat anak (*child dispositions*).
+4. **Rantai Turunan (*Descendant Chain*):** Penerima di tingkat bawah berhak menelaah riwayat instruksi dari pejabat-pejabat di atasnya (*parent history chain*) untuk memahami konteks arahan pimpinan tertinggi.
+5. **Admin / Pengelola Persuratan Institusional:** Pengguna dengan izin khusus `disposisi.kelola` atau `organisasi.kelola` (Admin Instansi / Staf Tata Usaha berizin) memiliki hak supervisi global untuk keperluan penatausahaan kearsipan.
+6. **Pengguna di Luar Keterlibatan (*Unrelated Users*):** Ditolak dengan status **403 Forbidden**. Sistem menolak akses membuka detail disposisi, mengunduh berkas lampiran bukti lewat manipulasi ID pada URL langsung, maupun melacak surat di luar unit/haknya melalui token QR.
+
 ---
 
 ## 2. Diagram Alur Sistem (Mermaid)

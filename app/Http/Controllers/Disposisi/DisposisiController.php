@@ -302,6 +302,13 @@ class DisposisiController extends Controller
             abort(401);
         }
 
+        $disposisi = $attachment->followup?->recipient?->disposisi;
+        if (! $disposisi) {
+            abort(404, 'Naskah disposisi tidak ditemukan.');
+        }
+
+        Gate::authorize('view', $disposisi);
+
         if (! Storage::disk('local')->exists($attachment->file_path)) {
             abort(404, 'Berkas lampiran bukti tidak ditemukan.');
         }

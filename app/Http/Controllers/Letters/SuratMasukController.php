@@ -309,8 +309,27 @@ class SuratMasukController extends Controller
             ->firstOrFail();
 
         $user = $request->user();
-        if (! $user->can('surat-masuk.lihat') && ! $user->can('disposisi.lihat')) {
-            abort(403, 'Anda tidak memiliki hak akses untuk melacak naskah dinas ini.');
+        if (! $user) {
+            abort(401);
+        }
+
+        // Akses global hanya untuk staff/admin persuratan yang memiliki hak pengelolaan
+        $hasGlobalAccess = $user->can('surat-masuk.lihat') 
+            && ($user->can('organisasi.kelola') || $user->can('surat-masuk.registrasi') || $user->can('disposisi.kelola'));
+
+        if (! $hasGlobalAccess) {
+            $isCreator = $suratMasuk->user_id === $user->id;
+            $isTargetUnit = $user->position && $user->position->org_unit_id && $suratMasuk->unit_tujuan_id === $user->position->org_unit_id;
+            
+            $isParticipantInDisposisi = Disposisi::where('surat_masuk_id', $suratMasuk->id)
+                ->where(function ($q) use ($user) {
+                    $q->where('pemberi_id', $user->id)
+                      ->orWhereHas('recipients', fn ($rq) => $rq->where('recipient_user_id', $user->id)->orWhere('delegated_user_id', $user->id));
+                })->exists();
+
+            if (! $isCreator && ! $isTargetUnit && ! $isParticipantInDisposisi) {
+                abort(403, 'Anda tidak memiliki hak akses untuk melacak naskah dinas ini.');
+            }
         }
 
         // Posisi surat saat ini
