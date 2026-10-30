@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -54,6 +55,12 @@ return new class extends Migration
             $table->index('tenggat_waktu');
             $table->index('status');
         });
+
+        // Pada PostgreSQL, hapus CHECK constraint lama dari tipe enum prototype
+        if (DB::getDriverName() === 'pgsql') {
+            DB::statement('ALTER TABLE disposisi DROP CONSTRAINT IF EXISTS disposisi_status_check;');
+            DB::statement('ALTER TABLE disposisi DROP CONSTRAINT IF EXISTS disposisi_prioritas_check;');
+        }
 
         // 3. Tabel Penerima Disposisi (Multi-Recipient & Multi-Tier)
         if (! Schema::hasTable('disposisi_recipients')) {

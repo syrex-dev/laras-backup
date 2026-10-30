@@ -2,27 +2,33 @@
 
 namespace App\Domain\Letters\Actions;
 
-use App\Domain\Letters\Support\DisposisiStatus;
+use App\Domain\Disposisi\Actions\CreateDisposisiAction as DomainCreateDisposisiAction;
+use App\Domain\SuratMasuk\Models\SuratMasuk;
 use App\Models\Disposisi;
-use App\Traits\Loggable;
+use App\Models\User;
 
 class CreateDisposisiAction
 {
-    use Loggable;
-
+    /**
+     * Backward-compatible wrapper delegating to modern Domain Action
+     */
     public function execute(array $data, int $senderId): Disposisi
     {
-        $disposisi = Disposisi::create([
-            'surat_masuk_id' => $data['surat_masuk_id'],
-            'pengirim_id' => $senderId,
-            'penerima_id' => $data['penerima_id'],
-            'instruksi' => $data['instruksi'],
-            'prioritas' => $data['prioritas'],
-            'status' => DisposisiStatus::BELUM_DIBACA,
-        ]);
+        $sender = User::findOrFail($senderId);
+        $suratMasuk = SuratMasuk::findOrFail($data['surat_masuk_id']);
 
-        $this->logActivity('created', 'disposisi', $disposisi->id);
+        $modernData = [
+            'instruksi' => $data['instruksi'] ?? 'Segera tindak lanjuti',
+            'catatan' => $data['catatan'] ?? null,
+            'prioritas' => $data['prioritas'] ?? Disposisi::PRIORITAS_BIASA,
+            'tenggat_waktu' => $data['tenggat_waktu'] ?? null,
+            'recipients' => isset($data['recipients']) && is_array($data['recipients'])
+                ? $data['recipients']
+                : [
+                    ['user_id' => $data['penerima_id'] ?? null],
+                ],
+        ];
 
-        return $disposisi;
+        return (new DomainCreateDisposisiAction())->execute($sender, $suratMasuk, $modernData);
     }
 }
