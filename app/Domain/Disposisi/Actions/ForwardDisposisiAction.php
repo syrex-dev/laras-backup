@@ -278,6 +278,14 @@ class ForwardDisposisiAction
                 'status_perubahan' => DisposisiRecipient::STATUS_DITERUSKAN,
             ]);
 
+            // Kirim notifikasi in-app dan queued mail ke setiap penerima bawahan
+            foreach ($childDisposisi->recipients as $recipient) {
+                $targetUser = $recipient->effectiveUser();
+                if ($targetUser) {
+                    $targetUser->notify(new \App\Domain\Disposisi\Notifications\DisposisiReceivedNotification($childDisposisi, $recipient));
+                }
+            }
+
             // Jejak Audit
             AuditLogger::log(
                 action: 'disposisi.forwarded',

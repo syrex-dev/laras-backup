@@ -188,6 +188,14 @@ class CreateDisposisiAction
                 $suratMasuk->update(['status' => 'didisposisikan']);
             }
 
+            // Kirim notifikasi in-app dan queued mail ke setiap penerima efektif
+            foreach ($disposisi->recipients as $recipient) {
+                $targetUser = $recipient->effectiveUser();
+                if ($targetUser) {
+                    $targetUser->notify(new \App\Domain\Disposisi\Notifications\DisposisiReceivedNotification($disposisi, $recipient));
+                }
+            }
+
             // Catat Jejak Audit
             AuditLogger::log(
                 action: 'disposisi.created',
