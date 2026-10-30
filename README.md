@@ -11,6 +11,16 @@ Aplikasi persuratan digital, tata usaha naskah dinas, disposisi berjenjang, dan 
 - **Node.js**: v20+ dan npm.
 - **Composer**: v2+.
 - **Database**: PostgreSQL 15+ (target produksi) atau SQLite (pengembangan lokal).
+- **Ekstensi PostgreSQL (`pg_trgm`)**:
+  Untuk mendukung pencarian teks berkecepatan tinggi berbasis trigram GIN pada naskah persuratan, aktifkan ekstensi `pg_trgm` pada basis data target:
+  ```sql
+  CREATE EXTENSION IF NOT EXISTS pg_trgm;
+  ```
+- **Hak Akses Basis Data (Database Privileges)**:
+  Pengguna database yang digunakan oleh aplikasi E-Office memerlukan hak: `CREATE`, `CONNECT`, pembuatan tabel, pembuatan indeks (termasuk GIN index), dan pembuatan trigger bahasa PL/pgSQL (untuk perlindungan append-only audit trail).
+- **Kompatibilitas SQLite**:
+  Seluruh migrasi yang memanfaatkan fitur spesifik PostgreSQL (seperti `pg_trgm`, GIN index, dan trigger append-only) telah diproteksi menggunakan klausul kondisional `if (DB::getDriverName() === 'pgsql')`. Dengan demikian, migrasi dan pengujian lokal via SQLite in-memory maupun file berjalan aman tanpa kendala.
+
 
 ### 2. Instalasi Dependensi
 ```bash
