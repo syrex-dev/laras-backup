@@ -186,4 +186,127 @@ class DisposisiDelegationPltTest extends TestCase
         $this->assertEquals($this->kajurDefinitif->id, $recipient->effectiveUser()->id);
         $this->assertEquals('', $recipient->delegation_label);
     }
+
+    public function test_open_disposition_stays_with_plt_holder_after_period_expires(): void
+    {
+        // Disposisi didelegasikan ke Plt
+        $action = new CreateDisposisiAction();
+        $disposisi = $action->execute($this->direktur, $this->suratMasuk, [
+            'instruksi' => 'Selesaikan telaah kurikulum',
+            'recipients' => [
+                ['position_id' => $this->posKajur->id],
+            ],
+        ]);
+        $recipient = $disposisi->recipients->first();
+        $recipient->update([
+            'is_delegated' => true,
+            'delegated_user_id' => $this->pltKajur->id,
+            'status' => 'diproses',
+        ]);
+        $recipient->refresh();
+        $disposisi->load('recipients');
+
+        // Pemegang Plt tetap dapat melihat dan menindaklanjuti sampai selesai
+        $this->assertTrue($this->pltKajur->can('view', $disposisi));
+        $this->assertTrue($this->pltKajur->can('followup', [Disposisi::class, $recipient]));
+    }
+
+    public function test_original_definitif_officer_has_readonly_access_to_open_plt_disposition(): void
+    {
+        $action = new CreateDisposisiAction();
+        $disposisi = $action->execute($this->direktur, $this->suratMasuk, [
+            'instruksi' => 'Telaah teknis program studi',
+            'recipients' => [
+                ['position_id' => $this->posKajur->id],
+            ],
+        ]);
+        $recipient = $disposisi->recipients->first();
+        $recipient->update([
+            'is_delegated' => true,
+            'delegated_user_id' => $this->pltKajur->id,
+            'status' => 'diproses',
+        ]);
+        $recipient->refresh();
+        $disposisi->load('recipients');
+
+        // Pejabat definitif asli BERHAK melihat (read-only)
+        $this->assertTrue($this->kajurDefinitif->can('view', $disposisi));
+        $responseView = $this->actingAs($this->kajurDefinitif)->get("/disposisi/recipient/{$recipient->id}");
+        $responseView->assertStatus(200);
+
+        // Pejabat definitif asli TIDAK BERHAK menindaklanjuti selama masih dipegang Plt (baca-saja)
+        $this->assertFalse($this->kajurDefinitif->can('followup', [Disposisi::class, $recipient]));
+        $responseFollowup = $this->actingAs($this->kajurDefinitif)->post("/disposisi/recipient/{$recipient->id}/followup", [
+            'status' => 'selesai',
+            'catatan' => 'Mencoba eksekusi tanpa ambil alih',
+        ]);
+        $responseFollowup->assertStatus(403);
+    }
+
+    public function test_supervisor_can_take_over_disposition_from_plt_holder(): void
+    {
+        $action = new CreateDisposisiAction();
+        $disposisi = $action->execute($this->direktur, $this->suratMasuk, [
+            'instruksi' => 'Koordinasi segera dengan senat akademik',
+            'recipients' => [
+                ['position_id' => $this->posKajur->id],
+            ],
+        ]);
+        $recipient = $disposisi->recipients->first();
+        $recipient->update([
+            'is_delegated' => true,
+            'delegated_user_id' => $this->pltKajur->id,
+            'status' => 'diproses',
+        ]);
+
+        // Atasan (Direktur selaku pemberi) mengambil alih disposisi
+        $this->assertTrue($this->direktur->can('takeOver', [Disposisi::class, $recipient]));
+
+        $responseTakeover = $this->actingAs($this->direktur)->post("/disposisi/recipient/{$recipient->id}/takeover", [
+            'alasan' => 'Masa penugasan Plt selesai, dialihkan kembali ke pejabat definitif.',
+            'target_user_id' => $this->kajurDefinitif->id,
+        ]);
+
+        $responseTakeover->assertSessionHasNoErrors();
+        $responseTakeover->assertRedirect();
+
+        // Disposisi kini kembali ke pejabat definitif
+        $recipient->refresh();
+        $this->assertFalse($recipient->is_delegated);
+        $this->assertNull($recipient->delegated_user_id);
+        $this->assertEquals($this->kajurDefinitif->id, $recipient->recipient_user_id);
+        $this->assertEquals($this->kajurDefinitif->id, $recipient->effectiveUser()->id);
+
+        // Tercatat di activity logs
+        $this->assertDatabaseHas('activity_logs', [
+            'action' => 'disposisi.ambil_alih',
+        ]);
+
+        // Pejabat definitif kini berhak mengeksekusi/menindaklanjuti
+        $this->assertTrue($this->kajurDefinitif->can('followup', [Disposisi::class, $recipient]));
+    }
+
+    public function test_unrelated_user_cannot_take_over_disposition(): void
+    {
+        $action = new CreateDisposisiAction();
+        $disposisi = $action->execute($this->direktur, $this->suratMasuk, [
+            'instruksi' => 'Instruksi rahasia',
+            'recipients' => [
+                ['position_id' => $this->posKajur->id],
+            ],
+        ]);
+        $recipient = $disposisi->recipients->first();
+        $recipient->update([
+            'is_delegated' => true,
+            'delegated_user_id' => $this->pltKajur->id,
+        ]);
+
+        $unrelatedUser = User::factory()->create();
+
+        $response = $this->actingAs($unrelatedUser)->post("/disposisi/recipient/{$recipient->id}/takeover", [
+            'alasan' => 'Mencoba ambil alih tanpa hak',
+        ]);
+
+        $response->assertStatus(403);
+    }
 }

@@ -41,12 +41,12 @@ class DisposisiPolicy
             return true;
         }
 
-        // Penerima aktif atau penerima Plt berhak melihat
-        $isRecipient = $disposisi->recipients->contains(function (DisposisiRecipient $rec) use ($user) {
-            return $rec->effectiveUser()?->id === $user->id;
+        // Penerima aktif, penerima Plt, maupun pemegang jabatan definitif asli (baca-saja) berhak melihat
+        $isRecipientOrOriginal = $disposisi->recipients->contains(function (DisposisiRecipient $rec) use ($user) {
+            return $rec->effectiveUser()?->id === $user->id || ($rec->is_delegated && $rec->recipient_user_id === $user->id);
         });
 
-        if ($isRecipient) {
+        if ($isRecipientOrOriginal) {
             return true;
         }
 
@@ -56,7 +56,7 @@ class DisposisiPolicy
             if ($parent->pemberi_id === $user->id) {
                 return true;
             }
-            if ($parent->recipients->contains(fn ($r) => $r->effectiveUser()?->id === $user->id)) {
+            if ($parent->recipients->contains(fn ($r) => $r->effectiveUser()?->id === $user->id || ($r->is_delegated && $r->recipient_user_id === $user->id))) {
                 return true;
             }
             $parent = $parent->parentDisposisi;
@@ -111,5 +111,18 @@ class DisposisiPolicy
         }
 
         return true;
+    }
+
+    /**
+     * Hak akses mengambil alih disposisi dari pemegang Plt
+     * (Atasan pemberi disposisi atau pengguna dengan hak disposisi.kelola)
+     */
+    public function takeOver(User $user, DisposisiRecipient $recipient): bool
+    {
+        if ($user->can('disposisi.kelola')) {
+            return true;
+        }
+
+        return $recipient->disposisi->pemberi_id === $user->id;
     }
 }

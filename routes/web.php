@@ -115,6 +115,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/disposisi/recipient/{recipient}', [\App\Http\Controllers\Disposisi\DisposisiController::class, 'show'])->name('disposisi.recipient.show');
     Route::post('/disposisi/recipient/{recipient}/forward', [\App\Http\Controllers\Disposisi\DisposisiController::class, 'forward'])->name('disposisi.recipient.forward');
     Route::post('/disposisi/recipient/{recipient}/followup', [\App\Http\Controllers\Disposisi\DisposisiController::class, 'followup'])->name('disposisi.recipient.followup');
+    Route::post('/disposisi/recipient/{recipient}/takeover', [\App\Http\Controllers\Disposisi\DisposisiController::class, 'takeover'])->name('disposisi.recipient.takeover');
     Route::get('/disposisi/attachments/{attachment}/download', [\App\Http\Controllers\Disposisi\DisposisiController::class, 'downloadAttachment'])->name('disposisi.attachment.download');
 
     // Legacy Disposisi Routes (Kompatibilitas Prototipe & Test Lama)

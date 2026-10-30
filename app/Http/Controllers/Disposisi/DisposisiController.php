@@ -6,6 +6,7 @@ use App\Domain\Audit\Services\AuditLogger;
 use App\Domain\Disposisi\Actions\CreateDisposisiAction;
 use App\Domain\Disposisi\Actions\FollowupDisposisiAction;
 use App\Domain\Disposisi\Actions\ForwardDisposisiAction;
+use App\Domain\Disposisi\Actions\TakeOverDisposisiAction;
 use App\Domain\Disposisi\Models\Disposisi;
 use App\Domain\Disposisi\Models\DisposisiAttachment;
 use App\Domain\Disposisi\Models\DisposisiRecipient;
@@ -376,6 +377,31 @@ class DisposisiController extends Controller
         }
 
         return Storage::disk('local')->download($attachment->file_path, $attachment->file_name);
+    }
+
+    /**
+     * Mengambil alih disposisi yang dipegang Plt oleh atasan atau pengelola
+     */
+    public function takeover(
+        Request $request,
+        DisposisiRecipient $recipient,
+        TakeOverDisposisiAction $action
+    ) {
+        Gate::authorize('takeOver', [Disposisi::class, $recipient]);
+
+        $validated = $request->validate([
+            'alasan' => 'nullable|string|max:500',
+            'target_user_id' => 'nullable|exists:users,id',
+        ]);
+
+        $action->execute(
+            Auth::user(),
+            $recipient,
+            $validated['alasan'] ?? null,
+            $validated['target_user_id'] ?? null
+        );
+
+        return redirect()->back()->with('success', 'Disposisi berhasil diambil alih.');
     }
 
     /**

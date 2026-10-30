@@ -95,11 +95,11 @@ class DisposisiRecipient extends Model
      */
     public function effectiveUser(): ?User
     {
-        if ($this->is_delegated && $this->delegatedUser) {
-            return $this->delegatedUser;
+        if ($this->is_delegated && $this->delegated_user_id) {
+            return $this->delegatedUser ?: User::find($this->delegated_user_id);
         }
 
-        return $this->recipientUser;
+        return $this->recipientUser ?: User::find($this->recipient_user_id);
     }
 
     /**
