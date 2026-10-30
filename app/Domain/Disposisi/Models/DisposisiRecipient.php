@@ -90,6 +90,11 @@ class DisposisiRecipient extends Model
         return $this->hasMany(DisposisiFollowup::class, 'disposisi_recipient_id')->orderBy('created_at', 'desc');
     }
 
+    public function suratKeluar(): BelongsTo
+    {
+        return $this->belongsTo(\App\Domain\SuratKeluar\Models\SuratKeluar::class, 'surat_keluar_id');
+    }
+
     /**
      * Pengguna efektif yang berhak mengeksekusi disposisi (Pejabat Definitif atau Pejabat Plt aktif)
      */
