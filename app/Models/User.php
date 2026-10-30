@@ -71,6 +71,10 @@ class User extends Authenticatable
         return $this->hasMany(PositionDelegation::class, 'delegate_user_id');
     }
 
+    /**
+     * @deprecated Relasi lama role_id TIDAK BOLEH digunakan untuk otorisasi sistem.
+     * Seluruh otorisasi sistem wajib menggunakan Spatie Permission (HasRoles) via $user->can('...').
+     */
     public function userRole()
     {
         return $this->belongsTo(Role::class, 'role_id');
