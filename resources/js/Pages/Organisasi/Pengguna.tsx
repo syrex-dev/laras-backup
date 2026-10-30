@@ -333,7 +333,7 @@ export default function Pengguna({ users, positions, roles, quota }: PenggunaPro
                                 label="Alamat Email Resmi"
                                 type="email"
                                 name="email"
-                                placeholder="nama@contoh.ac.id"
+                                placeholder="nama@instansi.id"
                                 value={data.email}
                                 onChange={(e) => setData('email', e.target.value)}
                                 error={errors.email}

@@ -6,11 +6,21 @@ import { Button } from '@/Components/Button';
 import { PageProps } from '@/types';
 import { LogIn } from 'lucide-react';
 
-interface LoginProps {
-    showDemoAccounts?: boolean;
+interface DemoAccount {
+    role: string;
+    email: string;
 }
 
-export default function Login({ showDemoAccounts = false }: LoginProps) {
+interface DemoAccountsInfo {
+    password: string;
+    accounts: DemoAccount[];
+}
+
+interface LoginProps {
+    demoAccounts?: DemoAccountsInfo | null;
+}
+
+export default function Login({ demoAccounts = null }: LoginProps) {
     const { props } = usePage<PageProps>();
     const { institution } = props;
 
@@ -39,7 +49,7 @@ export default function Login({ showDemoAccounts = false }: LoginProps) {
                     label="Alamat Email"
                     type="email"
                     name="email"
-                    placeholder="nama@contoh.ac.id"
+                    placeholder="nama@instansi.id"
                     value={data.email}
                     onChange={(e) => setData('email', e.target.value)}
                     error={errors.email}
@@ -48,7 +58,7 @@ export default function Login({ showDemoAccounts = false }: LoginProps) {
                 />
 
                 <FormInput
-                    label="Kata Sandi (Password)"
+                    label="Kata Sandi"
                     type="password"
                     name="password"
                     placeholder="••••••••"
@@ -84,12 +94,14 @@ export default function Login({ showDemoAccounts = false }: LoginProps) {
                 </div>
 
                 {/* Info Bantuan Demo */}
-                {showDemoAccounts && (
+                {demoAccounts && demoAccounts.accounts && demoAccounts.accounts.length > 0 && (
                     <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-100 text-[11px] text-slate-500 space-y-1">
-                        <p className="font-semibold text-slate-700">Akun Percontohan Demo (Password: password):</p>
-                        <p>• Admin: <span className="font-mono text-slate-700">admin@contoh.ac.id</span></p>
-                        <p>• Direktur: <span className="font-mono text-slate-700">direktur@contoh.ac.id</span></p>
-                        <p>• Staf TU: <span className="font-mono text-slate-700">tu@contoh.ac.id</span></p>
+                        <p className="font-semibold text-slate-700">Akun Percontohan Demo (Password: {demoAccounts.password}):</p>
+                        {demoAccounts.accounts.map((acc) => (
+                            <p key={acc.email}>
+                                • {acc.role}: <span className="font-mono text-slate-700">{acc.email}</span>
+                            </p>
+                        ))}
                     </div>
                 )}
             </form>

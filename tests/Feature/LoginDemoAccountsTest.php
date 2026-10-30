@@ -14,7 +14,10 @@ class LoginDemoAccountsTest extends TestCase
         $response->assertOk();
         $response->assertInertia(fn (Assert $page) => $page
             ->component('Auth/Login')
-            ->where('showDemoAccounts', true)
+            ->has('demoAccounts')
+            ->where('demoAccounts.password', 'password')
+            ->has('demoAccounts.accounts', 3)
+            ->where('demoAccounts.accounts.0.email', 'admin@contoh.ac.id')
         );
     }
 
@@ -27,7 +30,7 @@ class LoginDemoAccountsTest extends TestCase
         $response->assertOk();
         $response->assertInertia(fn (Assert $page) => $page
             ->component('Auth/Login')
-            ->missing('showDemoAccounts')
+            ->missing('demoAccounts')
         );
     }
 }

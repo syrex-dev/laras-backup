@@ -19,7 +19,14 @@ class LoginController extends Controller
 
         $props = [];
         if (app()->environment(['local', 'testing'])) {
-            $props['showDemoAccounts'] = true;
+            $props['demoAccounts'] = [
+                'password' => 'password',
+                'accounts' => [
+                    ['role' => 'Admin', 'email' => 'admin@contoh.ac.id'],
+                    ['role' => 'Direktur', 'email' => 'direktur@contoh.ac.id'],
+                    ['role' => 'Staf TU', 'email' => 'tu@contoh.ac.id'],
+                ],
+            ];
         }
 
         return Inertia::render('Auth/Login', $props);
