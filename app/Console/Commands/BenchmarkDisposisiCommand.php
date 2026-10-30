@@ -21,11 +21,11 @@ class BenchmarkDisposisiCommand extends Command
 {
     protected $signature = 'eoffice:benchmark-disposisi
                             {--surat-count=100000 : Jumlah total data surat masuk}
-                            {--disposisi-count=50000 : Jumlah total data disposisi}
-                            {--chunk=2000 : Ukuran batch insert}
+                            {--disposisi-count=200000 : Jumlah total data disposisi}
+                            {--chunk=1000 : Ukuran batch insert}
                             {--measure-only : Hanya ukur performa tanpa seeding data baru}';
 
-    protected $description = 'Memuat 100.000 surat masuk + 50.000 disposisi dan mengukur performa query EXPLAIN serta waktu respons HTTP nyata di PostgreSQL';
+    protected $description = 'Menguji skala 100.000 surat + 200.000 disposisi dengan distribusi pengguna realistis, query EXPLAIN BUFFERS, dan waktu respons HTTP di PostgreSQL';
 
     public function handle(): int
     {
@@ -34,7 +34,7 @@ class BenchmarkDisposisiCommand extends Command
             return Command::FAILURE;
         }
 
-        ini_set('memory_limit', '1024M');
+        ini_set('memory_limit', '1536M');
         DB::disableQueryLog();
 
         $targetSurat = (int) $this->option('surat-count');
@@ -44,8 +44,33 @@ class BenchmarkDisposisiCommand extends Command
 
         $this->info('========================================================================');
         $this->info('  BENCHMARK PERFORMA KOTAK MASUK DISPOSISI (POSTGRESQL)');
-        $this->info("  Target Beban Data: {$targetSurat} Surat Masuk + {$targetDisposisi} Disposisi");
+        $this->info("  Target Skala: {$targetSurat} Surat Masuk + {$targetDisposisi} Disposisi");
         $this->info('========================================================================');
+
+        // Daftar pengguna untuk distribusi penerima realistis instansi
+        $heavyUser = User::where('email', 'kajur.jtk@contoh.ac.id')->first()
+            ?? User::whereHas('roles', fn ($q) => $q->where('name', 'Kepala Unit'))->first()
+            ?? User::first();
+
+        $user2 = User::where('email', 'kaprodi.ti@contoh.ac.id')->first()
+            ?? User::whereHas('roles', fn ($q) => $q->where('name', 'Staf'))->first()
+            ?? $heavyUser;
+
+        $user3 = User::where('email', 'direktur@contoh.ac.id')->first()
+            ?? User::whereHas('roles', fn ($q) => $q->where('name', 'Pimpinan'))->first()
+            ?? $heavyUser;
+
+        $user4 = User::where('email', 'wadir1@contoh.ac.id')->first()
+            ?? User::where('id', '!=', $user3->id)->first()
+            ?? $heavyUser;
+
+        $user5 = User::where('email', 'tu@contoh.ac.id')->first()
+            ?? User::where('id', '!=', $user2->id)->first()
+            ?? $heavyUser;
+
+        $recipientsPool = [
+            $heavyUser, $user2, $user3, $user4, $user5
+        ];
 
         $currentSuratCount = SuratMasuk::count();
         $currentDisposisiCount = Disposisi::count();
@@ -55,8 +80,7 @@ class BenchmarkDisposisiCommand extends Command
 
         // 1. Pembuatan Data Uji Tambahan Jika Kurang
         if (! $measureOnly) {
-            $tuUser = User::whereHas('roles', fn ($q) => $q->where('name', 'Pimpinan'))->first() ?? User::first();
-            $kajurUser = User::whereHas('roles', fn ($q) => $q->where('name', 'Kepala Unit'))->first() ?? User::first();
+            $senderUser = $user3; // Direktur / Pimpinan sebagai pembuat disposisi
             $klasifikasi = KlasifikasiSurat::first() ?? KlasifikasiSurat::create([
                 'kode_klasifikasi' => 'UM.01',
                 'nama' => 'Umum & Tata Usaha',
@@ -66,7 +90,7 @@ class BenchmarkDisposisiCommand extends Command
             $unit = OrgUnit::first();
             $pos = Position::first();
 
-            // A. Seed Surat Masuk hingga 100.000
+            // A. Seed Surat Masuk hingga targetSurat
             if ($currentSuratCount < $targetSurat) {
                 $neededSurat = $targetSurat - $currentSuratCount;
                 $this->info("\n[1/2] Menghasilkan " . number_format($neededSurat) . " surat masuk tambahan...");
@@ -93,7 +117,7 @@ class BenchmarkDisposisiCommand extends Command
                             'sifat' => ($idx % 5 === 0) ? 'sangat_rahasia' : (($idx % 3 === 0) ? 'penting' : 'biasa'),
                             'klasifikasi_id' => $klasifikasi->id,
                             'unit_tujuan_id' => $unit?->id,
-                            'user_id' => $tuUser->id,
+                            'user_id' => $senderUser->id,
                             'qr_token' => Str::random(32),
                             'created_at' => $now,
                             'updated_at' => $now,
@@ -108,14 +132,18 @@ class BenchmarkDisposisiCommand extends Command
                 $this->newLine();
             }
 
-            // B. Seed Disposisi + Disposisi Recipients hingga 50.000
+            // B. Seed Disposisi + Disposisi Recipients hingga targetDisposisi (Distribusi Realistis)
             if ($currentDisposisiCount < $targetDisposisi) {
                 $neededDisposisi = $targetDisposisi - $currentDisposisiCount;
                 $this->info("\n[2/2] Menghasilkan " . number_format($neededDisposisi) . " disposisi & penerima tambahan...");
                 $bar = $this->output->createProgressBar($neededDisposisi);
                 $bar->start();
 
-                $suratIds = DB::table('surat_masuk')->select('id')->orderBy('id', 'asc')->limit($targetDisposisi)->pluck('id')->toArray();
+                $suratIds = DB::table('surat_masuk')->select('id')->orderBy('id', 'asc')->limit(100000)->pluck('id')->toArray();
+                if (empty($suratIds)) {
+                    $suratIds = [1];
+                }
+                $suratCount = count($suratIds);
                 $inserted = 0;
 
                 while ($inserted < $neededDisposisi) {
@@ -126,19 +154,38 @@ class BenchmarkDisposisiCommand extends Command
 
                     for ($i = 0; $i < $batchSize; $i++) {
                         $idx = $currentDisposisiCount + $inserted + $i + 1;
-                        $suratId = $suratIds[$i % count($suratIds)] ?? 1;
+                        $suratId = $suratIds[$i % $suratCount];
+
+                        // Distribusi Realistis:
+                        // 0..49 (50%) -> Heavy User (Kajur JTK)
+                        // 50..74 (25%) -> User 2 (Kaprodi D4 TI)
+                        // 75..84 (10%) -> User 3 (Direktur)
+                        // 85..94 (10%) -> User 4 (Wadir 1)
+                        // 95..99 (5%)  -> User 5 (Staf TU)
+                        $mod = $idx % 100;
+                        if ($mod < 50) {
+                            $targetRecipient = $heavyUser;
+                        } elseif ($mod < 75) {
+                            $targetRecipient = $user2;
+                        } elseif ($mod < 85) {
+                            $targetRecipient = $user3;
+                        } elseif ($mod < 95) {
+                            $targetRecipient = $user4;
+                        } else {
+                            $targetRecipient = $user5;
+                        }
 
                         $dispRows[] = [
                             'id' => $idx,
                             'surat_masuk_id' => $suratId,
-                            'pengirim_id' => $tuUser->id,
-                            'penerima_id' => $kajurUser->id,
-                            'pemberi_id' => $tuUser->id,
-                            'pemberi_position_id' => $pos?->id,
+                            'pengirim_id' => $senderUser->id,
+                            'penerima_id' => $targetRecipient->id,
+                            'pemberi_id' => $senderUser->id,
+                            'pemberi_position_id' => $senderUser->position_id,
                             'parent_disposisi_id' => null,
                             'instruksi' => ($idx % 3 === 0) ? 'Tindak lanjuti dan koordinasikan dengan tim teknis.' : 'Pelajari naskah dan siapkan telaah staf.',
                             'catatan' => 'Catatan disposisi percepatan pelaksanaan.',
-                            'prioritas' => ($idx % 4 === 0) ? 'sangat_segera' : (($idx % 2 === 0) ? 'segera' : 'biasa'),
+                            'prioritas' => ($idx % 3 === 0) ? 'sangat_segera' : (($idx % 2 === 0) ? 'segera' : 'biasa'),
                             'status' => 'diproses',
                             'tenggat_waktu' => now()->addDays(($idx % 10) - 2)->toDateTimeString(),
                             'created_at' => $now,
@@ -150,8 +197,8 @@ class BenchmarkDisposisiCommand extends Command
 
                         $recRows[] = [
                             'disposisi_id' => $idx,
-                            'recipient_user_id' => $kajurUser->id,
-                            'recipient_position_id' => $pos?->id,
+                            'recipient_user_id' => $targetRecipient->id,
+                            'recipient_position_id' => $targetRecipient->position_id,
                             'parent_recipient_id' => null,
                             'status' => $recStatus,
                             'is_delegated' => false,
@@ -186,12 +233,48 @@ class BenchmarkDisposisiCommand extends Command
         $this->line("Total Disposisi          : " . number_format($totalDisp));
         $this->line("Total Penerima Disposisi : " . number_format($totalRec));
 
+        // Tampilkan Tabel Distribusi Realistis Penerima
+        $this->newLine();
+        $this->info("=== DISTRIBUSI REALISTIS PENERIMA DISPOSISI (SKALA {$totalDisp} DISPOSISI) ===");
+        $distRows = [];
+        $uniqueUsers = collect($recipientsPool)->unique('id');
+
+        foreach ($uniqueUsers as $u) {
+            $totalUserRec = DisposisiRecipient::where('recipient_user_id', $u->id)->count();
+            if ($totalUserRec === 0) continue;
+
+            $pct = $totalRec > 0 ? round(($totalUserRec / $totalRec) * 100, 1) : 0;
+            $unread = DisposisiRecipient::where('recipient_user_id', $u->id)->where('status', 'belum_dibaca')->count();
+            $read = DisposisiRecipient::where('recipient_user_id', $u->id)->where('status', 'dibaca')->count();
+            $processing = DisposisiRecipient::where('recipient_user_id', $u->id)->where('status', 'diproses')->count();
+            $done = DisposisiRecipient::where('recipient_user_id', $u->id)->where('status', 'selesai')->count();
+
+            $isHeavy = ($u->id === $heavyUser->id) ? ' (HEAVY USER / TERPADAT)' : '';
+
+            $distRows[] = [
+                'Nama & Jabatan' => $u->name . $isHeavy,
+                'Email' => $u->email,
+                'Total Disposisi' => number_format($totalUserRec),
+                'Beban (%)' => "{$pct}%",
+                'Belum Dibaca' => number_format($unread),
+                'Dibaca' => number_format($read),
+                'Diproses' => number_format($processing),
+                'Selesai' => number_format($done),
+            ];
+        }
+
+        $this->table(
+            ['Nama & Jabatan', 'Email', 'Total Disposisi', 'Beban (%)', 'Belum Dibaca', 'Dibaca', 'Diproses', 'Selesai'],
+            $distRows
+        );
+
         // 2. EXPLAIN (ANALYZE, BUFFERS) Query Kotak Masuk Disposisi di PostgreSQL
-        $testUser = User::whereHas('roles', fn ($q) => $q->where('name', 'Kepala Unit'))->first() ?? User::first();
+        $testUser = $heavyUser;
 
         if (DB::getDriverName() === 'pgsql') {
             $this->newLine();
-            $this->info("=== EXPLAIN (ANALYZE, BUFFERS) QUERY KOTAK MASUK DISPOSISI (POSTGRESQL) ===");
+            $this->info("=== EXPLAIN (ANALYZE, BUFFERS) QUERY KOTAK MASUK PENGGUNA TERPADAT (POSTGRESQL) ===");
+            $this->line("Target Pengujian User: {$testUser->name} (ID: {$testUser->id}, Beban Terbesar)");
 
             // Query 1: Filter Belum Dibaca (Inbox Utama)
             $this->line("\n[Query 1: Kotak Masuk Belum Dibaca - Filter recipient_user_id + status='belum_dibaca']");
@@ -245,7 +328,7 @@ class BenchmarkDisposisiCommand extends Command
 
         // 3. Pengukuran Waktu Respons HTTP Nyata (Middleware + Policy + Inertia + Render)
         $this->newLine();
-        $this->info("=== PENGUKURAN WAKTU RESPONS HTTP NYATA PADA BEBAN 100K SURAT + 50K DISPOSISI ===");
+        $this->info("=== PENGUKURAN WAKTU RESPONS HTTP NYATA PADA BEBAN 100K SURAT + 200K DISPOSISI ===");
 
         Auth::login($testUser);
         $kernel = app(Kernel::class);
