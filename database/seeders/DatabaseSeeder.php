@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
             TemplateSuratSeeder::class,
             SuratMasukDemoSeeder::class,
             DisposisiDemoSeeder::class,
+            SuratKeluarDemoSeeder::class,
             SuratSeeder::class,
         ]);
     }

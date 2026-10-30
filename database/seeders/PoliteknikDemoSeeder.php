@@ -42,6 +42,9 @@ class PoliteknikDemoSeeder extends Seeder
             'surat-keluar.periksa',
             'surat-keluar.penomoran',
             'surat-keluar.tandatangan',
+            'surat-keluar.setujui',
+            'surat-keluar.batalkan',
+            'surat-keluar.kelola',
             'arsip.lihat',
             'arsip.kelola',
             'organisasi.kelola',
@@ -65,6 +68,8 @@ class PoliteknikDemoSeeder extends Seeder
                 'surat-keluar.lihat',
                 'surat-keluar.periksa',
                 'surat-keluar.tandatangan',
+                'surat-keluar.setujui',
+                'surat-keluar.batalkan',
                 'arsip.lihat',
             ],
             'Kepala Unit' => [
