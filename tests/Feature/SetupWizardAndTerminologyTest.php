@@ -61,6 +61,8 @@ class SetupWizardAndTerminologyTest extends TestCase
 
         $admin = User::where('email', 'admin@polsub.ac.id')->first();
         $this->assertTrue($admin->hasRole('Admin Instansi'));
+        $this->assertFalse($admin->hasRole('Admin'));
+        $this->assertCount(1, $admin->roles);
         $this->assertAuthenticatedAs($admin);
 
         // Verifikasi log audit setup tercatat
@@ -68,6 +70,60 @@ class SetupWizardAndTerminologyTest extends TestCase
             'action' => 'system.setup_completed',
             'causer_id' => $admin->id,
         ]);
+    }
+
+    public function test_setup_wizard_rejects_already_registered_email(): void
+    {
+        $profile = InstitutionProfile::current();
+        $profile->update(['is_configured' => false]);
+
+        User::factory()->create([
+            'email' => 'admin.terdaftar@polsub.ac.id',
+            'password' => bcrypt('existing-password'),
+        ]);
+
+        $response = $this->post('/setup', [
+            'institution_name' => 'Politeknik Negeri Subang',
+            'institution_alias' => 'POLSUB',
+            'timezone' => 'Asia/Jakarta',
+            'default_theme' => 'emerald',
+            'terminology_dict' => ['unit_level_1' => 'Jurusan'],
+            'admin_name' => 'Hacker Attack',
+            'admin_email' => 'admin.terdaftar@polsub.ac.id',
+            'admin_password' => 'new-password123',
+        ]);
+
+        $response->assertSessionHasErrors('admin_email');
+    }
+
+    public function test_setup_wizard_enforces_setup_token_when_configured(): void
+    {
+        putenv('SETUP_TOKEN=RAHASIA_SETUP_123');
+        $_ENV['SETUP_TOKEN'] = 'RAHASIA_SETUP_123';
+
+        try {
+            $profile = InstitutionProfile::current();
+            $profile->update(['is_configured' => false]);
+
+            // Akses tanpa token ditolak (403)
+            $responseDenied = $this->get('/setup');
+            $responseDenied->assertForbidden();
+
+            // Akses dengan token salah ditolak (403)
+            $responseBadToken = $this->get('/setup?token=TOKEN_SALAH');
+            $responseBadToken->assertForbidden();
+
+            // Akses dengan token benar via query string diizinkan (200)
+            $responseOk = $this->get('/setup?token=RAHASIA_SETUP_123');
+            $responseOk->assertOk();
+
+            // Akses dengan token via header diizinkan (200)
+            $responseHeaderOk = $this->withHeader('X-Setup-Token', 'RAHASIA_SETUP_123')->get('/setup');
+            $responseHeaderOk->assertOk();
+        } finally {
+            putenv('SETUP_TOKEN');
+            unset($_ENV['SETUP_TOKEN']);
+        }
     }
 
     public function test_configured_system_redirects_setup_route_to_dashboard(): void
