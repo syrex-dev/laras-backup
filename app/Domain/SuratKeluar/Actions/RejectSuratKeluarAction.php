@@ -83,8 +83,8 @@ class RejectSuratKeluarAction
 
             $this->auditLogger->log(
                 'surat_keluar.reject',
-                "Menolak draf surat keluar '{$suratKeluar->perihal}'. Alasan: {$trimmedAlasan}",
-                $suratKeluar
+                $suratKeluar,
+                "Menolak draf surat keluar '{$suratKeluar->perihal}'. Alasan: {$trimmedAlasan}"
             );
 
             return $suratKeluar->fresh(['approvals', 'versions']);

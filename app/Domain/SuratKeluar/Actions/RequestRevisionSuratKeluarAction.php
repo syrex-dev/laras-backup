@@ -83,8 +83,8 @@ class RequestRevisionSuratKeluarAction
 
             $this->auditLogger->log(
                 'surat_keluar.request_revision',
-                "Meminta revisi pada draf '{$suratKeluar->perihal}'. Catatan: {$trimmedCatatan}",
-                $suratKeluar
+                $suratKeluar,
+                "Meminta revisi pada draf '{$suratKeluar->perihal}'. Catatan: {$trimmedCatatan}"
             );
 
             return $suratKeluar->fresh(['approvals', 'versions']);

@@ -77,8 +77,8 @@ class SubmitSuratKeluarAction
 
             $this->auditLogger->log(
                 'surat_keluar.submit',
-                "Mengajukan draf '{$suratKeluar->perihal}' ke alur pemeriksaan berjenjang",
-                $suratKeluar
+                $suratKeluar,
+                "Mengajukan draf '{$suratKeluar->perihal}' ke alur pemeriksaan berjenjang"
             );
 
             return $suratKeluar->fresh(['approvals.user', 'approvals.position', 'versions']);

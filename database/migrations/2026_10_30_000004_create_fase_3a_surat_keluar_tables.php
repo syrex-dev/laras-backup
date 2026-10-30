@@ -75,6 +75,11 @@ return new class extends Migration
                 }
             });
 
+            // Lepaskan constraint check status_approval warisan prototipe lama di PostgreSQL agar kompatibel dengan status baru
+            if (DB::getDriverName() === 'pgsql') {
+                DB::statement('ALTER TABLE surat_keluar DROP CONSTRAINT IF EXISTS surat_keluar_status_approval_check');
+            }
+
             // Sinkronisasi data prototipe lama jika ada baris
             if (Schema::hasColumn('surat_keluar', 'isi')) {
                 DB::statement("UPDATE surat_keluar SET isi_surat = isi WHERE isi_surat IS NULL AND isi IS NOT NULL");

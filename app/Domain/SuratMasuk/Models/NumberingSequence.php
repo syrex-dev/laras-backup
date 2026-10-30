@@ -70,4 +70,35 @@ class NumberingSequence extends Model
             return $formatted;
         });
     }
+
+    /**
+     * Mengambil nilai integer berikutnya secara atomik dengan lockForUpdate().
+     * Jika dieksekusi di dalam transaksi yang kemudian di-rollback,
+     * nilai last_number otomatis kembali ke nilai semula (tanpa lubang/gap nomor).
+     */
+    public static function nextVal(
+        string $type,
+        int $year,
+        string $unitCode = 'PUSAT',
+        string $prefix = 'SK',
+        string $formatPattern = '{urut}/{kode_unit}/{kode_klasifikasi}/{bulan_romawi}/{tahun}'
+    ): int {
+        // Pastikan baris sudah ada tanpa risiko aborted transaction di PostgreSQL/SQLite
+        DB::statement('
+            INSERT INTO numbering_sequences (type, year, unit_code, prefix, last_number, format_pattern, created_at, updated_at)
+            VALUES (?, ?, ?, ?, 0, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ON CONFLICT (type, year, unit_code) DO NOTHING
+        ', [$type, $year, $unitCode, $prefix, $formatPattern]);
+
+        $sequence = static::where('type', $type)
+            ->where('year', $year)
+            ->where('unit_code', $unitCode)
+            ->lockForUpdate()
+            ->firstOrFail();
+
+        $nextVal = $sequence->last_number + 1;
+        $sequence->update(['last_number' => $nextVal]);
+
+        return $nextVal;
+    }
 }

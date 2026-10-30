@@ -59,7 +59,7 @@ class SaveDraftSuratKeluarAction
             'isi' => $data['isi_surat'] ?? '', // sinkronisasi kolom prototipe
             'sifat' => $data['sifat'] ?? SuratKeluar::SIFAT_BIASA,
             'status' => SuratKeluar::STATUS_DRAF,
-            'status_approval' => SuratKeluar::STATUS_DRAF,
+            'status_approval' => 'draft',
             'metadata' => $data['metadata'] ?? [],
             'qr_token' => Str::random(32),
             'lampiran' => $data['lampiran'] ?? null,
@@ -83,8 +83,8 @@ class SaveDraftSuratKeluarAction
 
         $this->auditLogger->log(
             'surat_keluar.create_draft',
-            "Menyusun draf surat keluar baru: '{$suratKeluar->perihal}'",
-            $suratKeluar
+            $suratKeluar,
+            "Menyusun draf surat keluar baru: '{$suratKeluar->perihal}'"
         );
 
         return $suratKeluar->fresh(['versions', 'attachments', 'template', 'klasifikasi']);
@@ -138,8 +138,8 @@ class SaveDraftSuratKeluarAction
 
         $this->auditLogger->log(
             'surat_keluar.update_draft',
-            "Memperbarui draf surat keluar: '{$existing->perihal}'",
-            $existing
+            $existing,
+            "Memperbarui draf surat keluar: '{$existing->perihal}'"
         );
 
         return $existing->fresh(['versions', 'attachments', 'template', 'klasifikasi']);

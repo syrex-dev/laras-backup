@@ -24,7 +24,8 @@ class ApproveSuratKeluarAction
     public function execute(
         User $actor,
         SuratKeluar $suratKeluar,
-        ?string $catatan = null
+        ?string $catatan = null,
+        bool $autoAllocateNomor = false
     ): SuratKeluar {
         if ($suratKeluar->status !== SuratKeluar::STATUS_DIPERIKSA) {
             throw ValidationException::withMessages([
@@ -89,8 +90,8 @@ class ApproveSuratKeluarAction
                 $actionType = $currentApproval->role_type === SuratKeluarApproval::ROLE_PARAF ? 'paraf' : 'periksa';
                 $this->auditLogger->log(
                     "surat_keluar.{$actionType}",
-                    "Memberikan {$actionType} tahap {$currentApproval->step_order} pada surat keluar '{$suratKeluar->perihal}'",
-                    $suratKeluar
+                    $suratKeluar,
+                    "Memberikan {$actionType} tahap {$currentApproval->step_order} pada surat keluar '{$suratKeluar->perihal}'"
                 );
             } else {
                 // Tahap akhir (penandatangan) disetujui penuh!
@@ -98,6 +99,11 @@ class ApproveSuratKeluarAction
                     'status' => SuratKeluar::STATUS_DISETUJUI,
                     'status_approval' => 'approved',
                 ]);
+
+                if ($autoAllocateNomor) {
+                    $nomorService = app(\App\Domain\SuratKeluar\Services\NomorSuratKeluarService::class);
+                    $nomorService->allocateNomor($suratKeluar, $actor);
+                }
 
                 // Notifikasi ke pembuat surat bahwa draf telah disetujui penuh
                 $creator = $suratKeluar->pembuat;
@@ -111,8 +117,8 @@ class ApproveSuratKeluarAction
 
                 $this->auditLogger->log(
                     'surat_keluar.approved_final',
-                    "Menyetujui penuh surat keluar '{$suratKeluar->perihal}' (siap dialokasikan nomor resmi)",
-                    $suratKeluar
+                    $suratKeluar,
+                    "Menyetujui penuh surat keluar '{$suratKeluar->perihal}'" . ($autoAllocateNomor ? ' dan mengalokasikan nomor resmi' : ' (siap dialokasikan nomor resmi)')
                 );
             }
 
