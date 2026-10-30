@@ -53,7 +53,7 @@ class CreateDisposisiAction
         if (! empty($data['instruction_template_id'])) {
             $template = InstructionTemplate::find($data['instruction_template_id']);
             if ($template) {
-                $instruksi = empty($instruksi) 
+                $instruksi = (empty($instruksi) || $instruksi === $template->nama)
                     ? $template->nama 
                     : "{$template->nama}. Catatan: {$instruksi}";
             }

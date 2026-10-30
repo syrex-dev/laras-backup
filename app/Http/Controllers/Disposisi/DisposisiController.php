@@ -140,6 +140,7 @@ class DisposisiController extends Controller
 
         // Data pendukung untuk Modal Disposisi Cepat Mobile (<= 3 Ketukan)
         $instructionTemplates = InstructionTemplate::active()->get();
+        $quickPresets = $this->generateQuickPresets($user);
         $subordinatePositions = Position::with(['orgUnit', 'users'])
             ->where('id', '!=', $user->position_id ?? 0)
             ->get();
@@ -158,7 +159,68 @@ class DisposisiController extends Controller
             ],
             'instructionTemplates' => $instructionTemplates,
             'subordinatePositions' => $subordinatePositions,
+            'quickPresets' => $quickPresets,
         ]);
+    }
+
+    /**
+     * Menghasilkan daftar preset disposisi cepat yang dinamis berbasis database
+     * (template instruksi + hierarki posisi/penerima bawahan + kamus data tanpa hardcoded nama jabatan)
+     */
+    protected function generateQuickPresets(User $user): array
+    {
+        $userPosition = $user->position;
+        $subordinatePositionsQuery = Position::with(['orgUnit', 'users']);
+
+        if ($userPosition) {
+            // Cari unit anak dari unit user atau posisi dengan level lebih tinggi (bawahan)
+            $childUnitIds = OrgUnit::where('parent_id', $userPosition->org_unit_id)->pluck('id');
+
+            $subordinatePositionsQuery->where(function ($q) use ($userPosition, $childUnitIds) {
+                if ($childUnitIds->isNotEmpty()) {
+                    $q->whereIn('org_unit_id', $childUnitIds);
+                }
+                $q->orWhere(function ($sub) use ($userPosition) {
+                    $sub->where('org_unit_id', $userPosition->org_unit_id)
+                        ->where('level', '>', $userPosition->level);
+                });
+            });
+        }
+
+        $subordinatePositions = $subordinatePositionsQuery->orderBy('level')->limit(6)->get();
+
+        // Fallback jika belum ada bawahan struktural langsung, ambil posisi selain milik user
+        if ($subordinatePositions->isEmpty()) {
+            $subordinatePositions = Position::with(['orgUnit', 'users'])
+                ->where('id', '!=', $user->position_id ?? 0)
+                ->orderBy('level')
+                ->limit(6)
+                ->get();
+        }
+
+        $instructionTemplates = InstructionTemplate::active()->take(4)->get();
+
+        $presets = [];
+        foreach ($subordinatePositions->take(4) as $pos) {
+            $occupant = $pos->users->first();
+            // Ambil 2 template instruksi teratas untuk setiap posisi bawahan
+            foreach ($instructionTemplates->take(2) as $tpl) {
+                $presets[] = [
+                    'id' => "preset_{$pos->id}_{$tpl->id}",
+                    'position_id' => $pos->id,
+                    'position_name' => $pos->name,
+                    'unit_name' => $pos->orgUnit?->name ?? 'Unit Kerja',
+                    'user_id' => $occupant?->id,
+                    'user_name' => $occupant?->name ?? 'Pejabat Definitif',
+                    'template_id' => $tpl->id,
+                    'template_nama' => $tpl->nama,
+                    'template_kode' => $tpl->kode,
+                    'prioritas' => 'biasa',
+                ];
+            }
+        }
+
+        return $presets;
     }
 
     /**

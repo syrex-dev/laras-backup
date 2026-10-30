@@ -8,8 +8,22 @@ import { Modal } from '@/Components/Modal';
 import { useTerminology } from '@/Hooks/useTerminology';
 import {
     Inbox, Send, Search, Filter, Clock, AlertTriangle, CheckCircle2,
-    ArrowRight, ChevronRight, UserCheck, ShieldAlert, Sparkles, FileText
+    ArrowRight, ChevronRight, UserCheck, ShieldAlert, Sparkles, FileText,
+    BookOpen, ChevronDown, ChevronUp, Paperclip, Download
 } from 'lucide-react';
+
+export interface QuickPreset {
+    id: string;
+    position_id: number;
+    position_name: string;
+    unit_name: string;
+    user_id?: number | null;
+    user_name: string;
+    template_id: number;
+    template_nama: string;
+    template_kode: string;
+    prioritas: string;
+}
 
 interface RecipientItem {
     id: number;
@@ -40,8 +54,16 @@ interface RecipientItem {
             nomor_agenda: string;
             nomor_surat: string;
             perihal: string;
+            ringkasan?: string | null;
             pengirim: string;
             tanggal_surat: string;
+            sifat?: string | null;
+            attachments?: Array<{
+                id: number;
+                original_filename: string;
+                file_size: number;
+                mime_type: string;
+            }>;
         } | null;
     };
 }
@@ -66,6 +88,7 @@ interface IndexProps {
     };
     instructionTemplates: Array<{ id: number; kode: string; nama: string }>;
     subordinatePositions: Array<{ id: number; name: string; org_unit?: { name: string } }>;
+    quickPresets?: QuickPreset[];
 }
 
 export default function Index({
@@ -74,17 +97,20 @@ export default function Index({
     stats,
     instructionTemplates,
     subordinatePositions,
+    quickPresets = [],
 }: IndexProps) {
     const { term } = useTerminology();
     const [searchQuery, setSearchQuery] = useState(filters.search || '');
     const [quickModalOpen, setQuickModalOpen] = useState(false);
     const [selectedSuratForQuick, setSelectedSuratForQuick] = useState<any>(null);
+    const [showFullLetter, setShowFullLetter] = useState(false);
 
     // Form Quick Disposisi Mobile (<= 3 Ketukan)
     const { data: quickData, setData: setQuickData, post: postQuick, processing: quickProcessing, reset: resetQuick } = useForm({
         surat_masuk_id: null as number | null,
         instruction_template_id: null as number | null,
         instruksi: '',
+        prioritas: 'biasa',
         recipients: [] as Array<{ position_id?: number; user_id?: number }>,
     });
 
@@ -97,26 +123,42 @@ export default function Index({
         router.get('/disposisi', { ...filters, [key]: value }, { preserveState: true });
     };
 
-    // Alur 3 Ketukan Mobile:
+    // Alur Disposisi Cepat Mobile:
     // Ketukan 1: Buka Modal Cepat
     const openQuickDisposisiModal = (surat: any) => {
         setSelectedSuratForQuick(surat);
-        setQuickData({
-            surat_masuk_id: surat.id,
-            instruction_template_id: instructionTemplates[0]?.id || null,
-            instruksi: instructionTemplates[0]?.nama || 'Tindak lanjuti segera',
-            recipients: subordinatePositions[0] ? [{ position_id: subordinatePositions[0].id }] : [],
-        });
+        setShowFullLetter(false); // default tertutup agar ringkas
+
+        // Pilih preset default dari quickPresets pertama jika ada, atau fallback
+        const defaultPreset = quickPresets[0];
+        if (defaultPreset) {
+            setQuickData({
+                surat_masuk_id: surat.id,
+                instruction_template_id: defaultPreset.template_id,
+                instruksi: defaultPreset.template_nama,
+                prioritas: defaultPreset.prioritas || 'biasa',
+                recipients: [{ position_id: defaultPreset.position_id, user_id: defaultPreset.user_id || undefined }],
+            });
+        } else {
+            setQuickData({
+                surat_masuk_id: surat.id,
+                instruction_template_id: instructionTemplates[0]?.id || null,
+                instruksi: instructionTemplates[0]?.nama || 'Tindak lanjuti segera',
+                prioritas: 'biasa',
+                recipients: subordinatePositions[0] ? [{ position_id: subordinatePositions[0].id }] : [],
+            });
+        }
         setQuickModalOpen(true);
     };
 
-    // Ketukan 2: Pilih preset kombinasi cepat (Penerima + Instruksi) dalam 1 tap
-    const selectQuickPreset = (positionId: number, templateId: number, templateName: string) => {
+    // Ketukan 2: Pilih preset kombinasi cepat (Penerima + Instruksi dari Database) dalam 1 tap
+    const selectQuickPresetItem = (preset: QuickPreset) => {
         setQuickData({
             ...quickData,
-            instruction_template_id: templateId,
-            instruksi: templateName,
-            recipients: [{ position_id: positionId }],
+            instruction_template_id: preset.template_id,
+            instruksi: preset.template_nama,
+            prioritas: preset.prioritas || 'biasa',
+            recipients: [{ position_id: preset.position_id, user_id: preset.user_id || undefined }],
         });
     };
 
@@ -413,46 +455,173 @@ export default function Index({
             >
                 {selectedSuratForQuick && (
                     <form onSubmit={handleQuickSubmit} className="space-y-4">
-                        <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg text-xs space-y-1">
-                            <p className="font-semibold text-slate-900 dark:text-white">
-                                {selectedSuratForQuick.perihal}
-                            </p>
-                            <p className="text-slate-500">
-                                Agenda: {selectedSuratForQuick.nomor_agenda} • Pengirim: {selectedSuratForQuick.pengirim}
-                            </p>
+                        {/* Ringkasan Surat Singkat */}
+                        <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-lg text-xs space-y-1 border border-slate-200 dark:border-slate-700">
+                            <div className="flex items-start justify-between gap-2">
+                                <div>
+                                    <p className="font-semibold text-slate-900 dark:text-white line-clamp-2">
+                                        {selectedSuratForQuick.perihal}
+                                    </p>
+                                    <p className="text-slate-500 mt-0.5">
+                                        Agenda: <span className="font-mono text-slate-700 dark:text-slate-300">{selectedSuratForQuick.nomor_agenda}</span> • Pengirim: <span className="font-medium text-slate-700 dark:text-slate-300">{selectedSuratForQuick.pengirim}</span>
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Tombol Baca Isi Surat di Tengah Alur (Mobile In-Flow Reading) */}
+                            <div className="pt-2 border-t border-slate-200 dark:border-slate-700/60">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowFullLetter(!showFullLetter)}
+                                    className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-md bg-white dark:bg-slate-700/60 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-xs font-medium hover:bg-slate-100 transition-colors"
+                                >
+                                    <span className="flex items-center gap-1.5">
+                                        <BookOpen className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                        <span>{showFullLetter ? 'Tutup Pratinjau Naskah' : '📖 Baca Isi Naskah Lengkap & Lampiran'}</span>
+                                    </span>
+                                    {showFullLetter ? (
+                                        <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
+                                    ) : (
+                                        <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                                    )}
+                                </button>
+
+                                {/* Panel Membaca Naskah Lengkap */}
+                                {showFullLetter && (
+                                    <div className="mt-2 p-3 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 text-xs space-y-2 max-h-56 overflow-y-auto">
+                                        <div className="grid grid-cols-2 gap-2 text-[11px] pb-2 border-b border-slate-100 dark:border-slate-800">
+                                            <div>
+                                                <span className="text-slate-400 block">Nomor Surat:</span>
+                                                <span className="font-medium text-slate-700 dark:text-slate-200">{selectedSuratForQuick.nomor_surat || '-'}</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-slate-400 block">Tanggal Surat:</span>
+                                                <span className="font-medium text-slate-700 dark:text-slate-200">{selectedSuratForQuick.tanggal_surat || '-'}</span>
+                                            </div>
+                                            <div>
+                                                <span className="text-slate-400 block">Sifat Naskah:</span>
+                                                <span className="font-medium capitalize text-slate-700 dark:text-slate-200">{selectedSuratForQuick.sifat || 'Biasa'}</span>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <span className="text-slate-400 block text-[11px] mb-1 font-semibold">Ringkasan / Isi Naskah:</span>
+                                            <p className="text-slate-700 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-slate-800/80 p-2 rounded border border-slate-200 dark:border-slate-700/50">
+                                                {selectedSuratForQuick.ringkasan || selectedSuratForQuick.perihal}
+                                            </p>
+                                        </div>
+
+                                        {/* Berkas Lampiran */}
+                                        {selectedSuratForQuick.attachments && selectedSuratForQuick.attachments.length > 0 && (
+                                            <div>
+                                                <span className="text-slate-400 block text-[11px] mb-1 font-semibold">Berkas Lampiran ({selectedSuratForQuick.attachments.length}):</span>
+                                                <div className="space-y-1">
+                                                    {selectedSuratForQuick.attachments.map((att: any) => (
+                                                        <a
+                                                            key={att.id}
+                                                            href={`/surat-masuk/attachments/${att.id}/download`}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="flex items-center justify-between p-1.5 rounded bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-100"
+                                                        >
+                                                            <span className="flex items-center gap-1.5 truncate max-w-[200px]">
+                                                                <Paperclip className="w-3 h-3 flex-shrink-0" />
+                                                                <span className="truncate">{att.original_filename}</span>
+                                                            </span>
+                                                            <span className="flex items-center gap-1 text-[10px] font-medium">
+                                                                <Download className="w-3 h-3" />
+                                                                Unduh
+                                                            </span>
+                                                        </a>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
-                        {/* Preset Pilihan Cepat (Ketukan 2: 1 Sentuhan Memilih Penerima + Instruksi) */}
+                        {/* Preset Pilihan Cepat (Ketukan 2: 1 Sentuhan Memilih Penerima + Instruksi dari Database) */}
                         <div>
                             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                                Pilih Preset Instan (1 Ketukan):
+                                ⚡ Pilih Preset Rekomendasi (1 Sentuhan):
                             </label>
-                            <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">
-                                {subordinatePositions.slice(0, 4).map((pos) => {
-                                    const tpl = instructionTemplates[0] || { id: 1, nama: 'Tindak lanjuti segera' };
-                                    const isSelected = quickData.recipients[0]?.position_id === pos.id;
 
-                                    return (
-                                        <button
-                                            key={pos.id}
-                                            type="button"
-                                            onClick={() => selectQuickPreset(pos.id, tpl.id, tpl.nama)}
-                                            className={`text-left p-2.5 rounded-lg border text-xs transition-all ${
-                                                isSelected
-                                                    ? 'border-emerald-500 bg-emerald-50 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200 font-semibold'
-                                                    : 'border-slate-200 dark:border-slate-700 hover:border-slate-400'
-                                            }`}
-                                        >
-                                            <div className="flex justify-between items-center">
-                                                <span>Kepada: <strong>{pos.name}</strong></span>
-                                                {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
-                                            </div>
-                                            <p className="text-slate-500 text-[11px] mt-0.5">
-                                                Instruksi: "{tpl.nama}"
-                                            </p>
-                                        </button>
-                                    );
-                                })}
+                            <div className="grid grid-cols-1 gap-2 max-h-52 overflow-y-auto pr-1">
+                                {quickPresets.length > 0 ? (
+                                    quickPresets.map((preset) => {
+                                        const isSelected =
+                                            quickData.recipients[0]?.position_id === preset.position_id &&
+                                            quickData.instruction_template_id === preset.template_id;
+
+                                        return (
+                                            <button
+                                                key={preset.id}
+                                                type="button"
+                                                onClick={() => selectQuickPresetItem(preset)}
+                                                className={`text-left p-3 rounded-lg border text-xs transition-all ${
+                                                    isSelected
+                                                        ? 'border-emerald-500 bg-emerald-50 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200 font-semibold ring-1 ring-emerald-500 shadow-sm'
+                                                        : 'border-slate-200 dark:border-slate-700 hover:border-slate-400 bg-white dark:bg-slate-800/60'
+                                                }`}
+                                            >
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-slate-900 dark:text-white font-medium">
+                                                        Kepada: <strong>{preset.position_name}</strong>
+                                                        <span className="text-slate-500 dark:text-slate-400 font-normal ml-1">
+                                                            ({preset.unit_name})
+                                                        </span>
+                                                    </span>
+                                                    {isSelected && <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />}
+                                                </div>
+                                                <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5">
+                                                    Pejabat: {preset.user_name}
+                                                </p>
+                                                <div className="mt-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-[11px]">
+                                                    <span className="text-emerald-700 dark:text-emerald-400 font-medium">
+                                                        Instruksi: "{preset.template_nama}"
+                                                    </span>
+                                                    <span className="text-slate-400 uppercase text-[10px] font-mono">
+                                                        {preset.template_kode}
+                                                    </span>
+                                                </div>
+                                            </button>
+                                        );
+                                    })
+                                ) : (
+                                    // Fallback jika belum ada presets
+                                    subordinatePositions.slice(0, 4).map((pos) => {
+                                        const tpl = instructionTemplates[0] || { id: 1, nama: 'Tindak lanjuti segera', kode: 'TL' };
+                                        const isSelected = quickData.recipients[0]?.position_id === pos.id;
+
+                                        return (
+                                            <button
+                                                key={pos.id}
+                                                type="button"
+                                                onClick={() => setQuickData({
+                                                    ...quickData,
+                                                    instruction_template_id: tpl.id,
+                                                    instruksi: tpl.nama,
+                                                    recipients: [{ position_id: pos.id }],
+                                                })}
+                                                className={`text-left p-2.5 rounded-lg border text-xs transition-all ${
+                                                    isSelected
+                                                        ? 'border-emerald-500 bg-emerald-50 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200 font-semibold'
+                                                        : 'border-slate-200 dark:border-slate-700 hover:border-slate-400'
+                                                }`}
+                                            >
+                                                <div className="flex justify-between items-center">
+                                                    <span>Kepada: <strong>{pos.name}</strong></span>
+                                                    {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
+                                                </div>
+                                                <p className="text-slate-500 text-[11px] mt-0.5">
+                                                    Instruksi: "{tpl.nama}"
+                                                </p>
+                                            </button>
+                                        );
+                                    })
+                                )}
                             </div>
                         </div>
 
@@ -469,7 +638,7 @@ export default function Index({
                                 type="submit"
                                 variant="primary"
                                 disabled={quickProcessing}
-                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center gap-1.5"
                             >
                                 {quickProcessing ? 'Mengirim...' : '🚀 Kirim Disposisi Sekarang'}
                             </Button>
