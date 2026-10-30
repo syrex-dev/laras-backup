@@ -2,8 +2,12 @@
 
 namespace App\Providers;
 
+use App\Domain\Disposisi\Models\Disposisi as DomainDisposisi;
+use App\Domain\SuratMasuk\Models\SuratMasuk as DomainSuratMasuk;
+use App\Models\Disposisi;
 use App\Models\SuratMasuk;
 use App\Models\User;
+use App\Policies\DisposisiPolicy;
 use App\Policies\SuratMasukPolicy;
 use App\Policies\UserPolicy;
 use Illuminate\Support\Facades\Gate;
@@ -26,5 +30,8 @@ class AppServiceProvider extends ServiceProvider
     {
         Gate::policy(User::class, UserPolicy::class);
         Gate::policy(SuratMasuk::class, SuratMasukPolicy::class);
+        Gate::policy(DomainSuratMasuk::class, SuratMasukPolicy::class);
+        Gate::policy(Disposisi::class, DisposisiPolicy::class);
+        Gate::policy(DomainDisposisi::class, DisposisiPolicy::class);
     }
 }

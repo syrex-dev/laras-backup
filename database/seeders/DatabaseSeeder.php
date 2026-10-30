@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
             PoliteknikDemoSeeder::class,
             InstructionTemplateSeeder::class,
             SuratMasukDemoSeeder::class,
+            DisposisiDemoSeeder::class,
             SuratSeeder::class,
         ]);
     }

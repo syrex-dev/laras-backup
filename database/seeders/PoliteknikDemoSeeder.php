@@ -284,6 +284,14 @@ class PoliteknikDemoSeeder extends Seeder
                 'position_id' => $posPetugasArsip->id,
                 'roles' => ['Petugas Arsip'],
             ],
+            [
+                'email' => 'kaprodi.ti@contoh.ac.id',
+                'name' => 'Ahmad Fadillah, S.Kom., M.T.',
+                'nip' => '198204122005011002',
+                'phone' => '081234567896',
+                'position_id' => $posKaprodiD4->id,
+                'roles' => ['Kepala Unit', 'Staf'],
+            ],
         ];
 
         foreach ($demoUsers as $u) {

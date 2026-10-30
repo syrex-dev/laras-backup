@@ -17,6 +17,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -28,6 +29,8 @@ class DisposisiController extends Controller
      */
     public function index(Request $request): Response
     {
+        Gate::authorize('viewAny', Disposisi::class);
+
         /** @var User $user */
         $user = Auth::user();
         $tab = $request->input('tab', 'inbox'); // inbox | sent
@@ -44,7 +47,7 @@ class DisposisiController extends Controller
                     'recipients.delegatedUser',
                 ])
                 ->where('pemberi_id', $user->id)
-                ->latest();
+                ->latest('id');
 
             if ($status !== 'semua') {
                 $query->where('status', $status);
@@ -73,20 +76,21 @@ class DisposisiController extends Controller
                     'recipientUser',
                 ])
                 ->where(function ($q) use ($user) {
-                    $q->where('recipient_user_id', $user->id)
-                      ->orWhere('delegated_user_id', $user->id);
+                    $q->where('disposisi_recipients.recipient_user_id', $user->id)
+                      ->orWhere('disposisi_recipients.delegated_user_id', $user->id);
                 })
-                ->latest();
+                ->latest('disposisi_recipients.id');
 
             if ($status === 'terlambat') {
-                $query->whereNotIn('status', [
+                $query->whereNotIn('disposisi_recipients.status', [
                     DisposisiRecipient::STATUS_SELESAI,
                     DisposisiRecipient::STATUS_DITOLAK,
                     DisposisiRecipient::STATUS_DIKEMBALIKAN,
-                ])->whereHas('disposisi', function ($q) {
-                    $q->whereNotNull('tenggat_waktu')
-                      ->where('tenggat_waktu', '<', now()->toDateString());
-                });
+                ])
+                ->join('disposisi', 'disposisi.id', '=', 'disposisi_recipients.disposisi_id')
+                ->whereNotNull('disposisi.tenggat_waktu')
+                ->where('disposisi.tenggat_waktu', '<', now()->toDateString())
+                ->select('disposisi_recipients.*');
             } elseif ($status !== 'semua') {
                 $query->where('status', $status);
             }
@@ -121,14 +125,18 @@ class DisposisiController extends Controller
         })->where('status', DisposisiRecipient::STATUS_BELUM_DIBACA)->count();
 
         $overdueCount = DisposisiRecipient::where(function ($q) use ($user) {
-            $q->where('recipient_user_id', $user->id)->orWhere('delegated_user_id', $user->id);
-        })->whereNotIn('status', [
+            $q->where('disposisi_recipients.recipient_user_id', $user->id)
+              ->orWhere('disposisi_recipients.delegated_user_id', $user->id);
+        })
+        ->whereNotIn('disposisi_recipients.status', [
             DisposisiRecipient::STATUS_SELESAI,
             DisposisiRecipient::STATUS_DITOLAK,
             DisposisiRecipient::STATUS_DIKEMBALIKAN,
-        ])->whereHas('disposisi', function ($q) {
-            $q->whereNotNull('tenggat_waktu')->where('tenggat_waktu', '<', now()->toDateString());
-        })->count();
+        ])
+        ->join('disposisi', 'disposisi.id', '=', 'disposisi_recipients.disposisi_id')
+        ->whereNotNull('disposisi.tenggat_waktu')
+        ->where('disposisi.tenggat_waktu', '<', now()->toDateString())
+        ->count();
 
         // Data pendukung untuk Modal Disposisi Cepat Mobile (<= 3 Ketukan)
         $instructionTemplates = InstructionTemplate::active()->get();
@@ -158,16 +166,14 @@ class DisposisiController extends Controller
      */
     public function show(DisposisiRecipient $recipient): Response
     {
+        Gate::authorize('view', $recipient->disposisi);
+
         /** @var User $user */
         $user = Auth::user();
         $effectiveUser = $recipient->effectiveUser();
         $isRecipient = $effectiveUser && $effectiveUser->id === $user->id;
         $isSender = $recipient->disposisi->pemberi_id === $user->id;
         $isAdmin = $user->hasRole(['Admin Instansi', 'Admin']);
-
-        if (! $isRecipient && ! $isSender && ! $isAdmin && ! $user->can('disposisi.lihat')) {
-            abort(403, 'Anda tidak memiliki hak akses melihat disposisi ini.');
-        }
 
         // Tandai dibaca jika pertama kali dibuka oleh penerima
         if ($isRecipient && $recipient->status === DisposisiRecipient::STATUS_BELUM_DIBACA) {
@@ -219,6 +225,7 @@ class DisposisiController extends Controller
         Request $request,
         CreateDisposisiAction $action
     ) {
+        Gate::authorize('create', Disposisi::class);
         $validated = $request->validate([
             'surat_masuk_id' => 'required|exists:surat_masuk,id',
             'instruction_template_id' => 'nullable|exists:instruction_templates,id',
@@ -245,6 +252,7 @@ class DisposisiController extends Controller
         DisposisiRecipient $recipient,
         ForwardDisposisiAction $action
     ) {
+        Gate::authorize('forward', [Disposisi::class, $recipient]);
         $validated = $request->validate([
             'instruction_template_id' => 'nullable|exists:instruction_templates,id',
             'instruksi' => 'nullable|string',
@@ -269,6 +277,7 @@ class DisposisiController extends Controller
         DisposisiRecipient $recipient,
         FollowupDisposisiAction $action
     ) {
+        Gate::authorize('followup', [Disposisi::class, $recipient]);
         $validated = $request->validate([
             'status' => 'required|in:diproses,selesai,ditolak,dikembalikan',
             'catatan' => 'required|string',
