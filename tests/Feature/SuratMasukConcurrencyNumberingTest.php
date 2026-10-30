@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Domain\SuratMasuk\Models\NumberingSequence;
 use App\Domain\SuratMasuk\Services\AgendaNumberService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class SuratMasukConcurrencyNumberingTest extends TestCase
@@ -45,7 +47,11 @@ class SuratMasukConcurrencyNumberingTest extends TestCase
         $this->assertEquals('SM-2026-0001', $jtk2026);
     }
 
-    public function test_consecutive_generation_under_stress_produces_no_duplicates(): void
+    /**
+     * Uji Logika: Memastikan generator nomor berurutan serial dalam 1 proses tanpa error format.
+     * Catatan: Ini adalah uji logika format dan penambahan serial, bukan uji race condition paralel nyata.
+     */
+    public function test_consecutive_generation_in_single_process_proves_numbering_logic(): void
     {
         $service = new AgendaNumberService;
         $generatedNumbers = [];
@@ -66,5 +72,26 @@ class SuratMasukConcurrencyNumberingTest extends TestCase
         // Buktikan format nomor pertama dan terakhir
         $this->assertEquals('SM-2026-0001', $generatedNumbers[0]);
         $this->assertEquals('SM-2026-0050', $generatedNumbers[49]);
+    }
+
+    /**
+     * Uji Konkurensi Nyata: Menjalankan 10 proses paralel independen secara serentak
+     * untuk membuktikan lockForUpdate() pada PostgreSQL/database benar-benar mencegah
+     * race condition, duplikasi nomor, atau celah (gaps) urutan.
+     */
+    public function test_true_multi_process_concurrency_with_parallel_processes_produces_no_duplicates_or_gaps(): void
+    {
+        if (DB::getDriverName() !== 'pgsql') {
+            $this->markTestSkipped('Uji konkurensi multi-proses paralel memerlukan database PostgreSQL dengan row-level lockForUpdate().');
+        }
+
+        $exitCode = Artisan::call('app:test-agenda-concurrency', [
+            '--processes' => 10,
+            '--per-process' => 2,
+            '--unit' => 'PHPUNIT_PARALLEL',
+            '--year' => 2026,
+        ]);
+
+        $this->assertEquals(0, $exitCode, 'Uji konkurensi multi-proses gagal!');
     }
 }

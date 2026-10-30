@@ -110,6 +110,12 @@ return new class extends Migration
         Schema::table('surat_masuk', function (Blueprint $table) {
             $table->dropForeign(['unit_tujuan_id']);
             $table->dropForeign(['dibatalkan_oleh_id']);
+
+            $table->dropIndex(['status']);
+            $table->dropIndex(['tanggal_diterima']);
+            $table->dropIndex(['tanggal_surat']);
+            $table->dropIndex(['sifat']);
+
             $table->dropColumn([
                 'nomor_agenda',
                 'unit_tujuan_id',

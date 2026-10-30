@@ -106,7 +106,7 @@ class BenchmarkSuratMasukCommand extends Command
                         'keterangan' => 'Generated benchmark test data',
                         'search_text' => $searchText,
                         'qr_token' => Str::random(32),
-                        'user_id' => $tuUser ? $tuUser->id : 1,
+                        'user_id' => $tuUser ? $tuUser->id : User::first()->id,
                         'created_at' => $now,
                         'updated_at' => $now,
                     ];
@@ -216,6 +216,36 @@ class BenchmarkSuratMasukCommand extends Command
             ['Skenario Pengujian', 'Total Ditemukan', 'Waktu Eksekusi Sebenarnya', 'Status (< 2 Detik)'],
             $resultsTable
         );
+
+        // Jika driver PostgreSQL, jalankan EXPLAIN ANALYZE untuk 2 query utama
+        if (DB::getDriverName() === 'pgsql') {
+            $this->newLine();
+            $this->info('=== EXPLAIN (ANALYZE, BUFFERS) DUA QUERY UTAMA PADA POSTGRESQL ===');
+
+            $this->line("\n[Query 1: Filter Gabungan (status='terdaftar', sifat='penting')]:");
+            $q1Plan = DB::select("
+                EXPLAIN (ANALYZE, BUFFERS)
+                SELECT * FROM surat_masuk
+                WHERE status = 'terdaftar' AND sifat = 'penting'
+                ORDER BY tanggal_diterima DESC, id DESC
+                LIMIT 15
+            ");
+            foreach ($q1Plan as $row) {
+                $this->line('  '.$row->{'QUERY PLAN'});
+            }
+
+            $this->line("\n[Query 2: Pencarian FTS GIN Index (Kementerian)]:");
+            $q2Plan = DB::select("
+                EXPLAIN (ANALYZE, BUFFERS)
+                SELECT * FROM surat_masuk
+                WHERE to_tsvector('simple', coalesce(search_text, '')) @@ to_tsquery('simple', 'Kementerian')
+                ORDER BY tanggal_diterima DESC, id DESC
+                LIMIT 15
+            ");
+            foreach ($q2Plan as $row) {
+                $this->line('  '.$row->{'QUERY PLAN'});
+            }
+        }
 
         $this->info('Semua pengujian performa selesai.');
 

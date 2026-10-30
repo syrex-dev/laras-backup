@@ -38,25 +38,18 @@ class NumberingSequence extends Model
         string $formatPattern = '{prefix}-{year}-{number:4}'
     ): string {
         return DB::transaction(function () use ($type, $year, $unitCode, $prefix, $formatPattern) {
+            // Pastikan baris sudah ada tanpa risiko aborted transaction di PostgreSQL/SQLite
+            DB::statement('
+                INSERT INTO numbering_sequences (type, year, unit_code, prefix, last_number, format_pattern, created_at, updated_at)
+                VALUES (?, ?, ?, ?, 0, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                ON CONFLICT (type, year, unit_code) DO NOTHING
+            ', [$type, $year, $unitCode, $prefix, $formatPattern]);
+
             $sequence = static::where('type', $type)
                 ->where('year', $year)
                 ->where('unit_code', $unitCode)
                 ->lockForUpdate()
-                ->first();
-
-            if (! $sequence) {
-                $sequence = static::create([
-                    'type' => $type,
-                    'year' => $year,
-                    'unit_code' => $unitCode,
-                    'prefix' => $prefix,
-                    'last_number' => 0,
-                    'format_pattern' => $formatPattern,
-                ]);
-
-                // Re-lock baris yang baru dibuat
-                $sequence = static::where('id', $sequence->id)->lockForUpdate()->first();
-            }
+                ->firstOrFail();
 
             $nextVal = $sequence->last_number + 1;
             $sequence->update(['last_number' => $nextVal]);

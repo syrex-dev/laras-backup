@@ -125,6 +125,27 @@ Jika halaman browser (misalnya `/login` atau halaman lainnya) menampilkan layar 
 3. **Cache browser lokal**:
    Lakukan *hard refresh* di browser dengan menekan **`Ctrl + Shift + R`** atau **`Ctrl + F5`** (atau `Cmd + Shift + R` di macOS).
 
+### 4. Ekstensi PHP Wajib & Penyelarasan PHP CLI vs Web (Herd)
+Aplikasi membutuhkan PHP 8.3+ (pada lingkungan pengembangan lokal ini menggunakan **PHP 8.5.12**).
+- **Ekstensi PHP yang WAJIB Aktif:**
+  - `pdo_pgsql` & `pgsql` : Driver utama PostgreSQL (wajib untuk trigger PL/pgSQL & FTS)
+  - `pdo_sqlite` & `sqlite3` : Pengujian suite lokal
+  - `pdo_mysql` : Driver fallback MySQL (bila diperlukan)
+  - `redis` : Driver antrean & cache Redis
+  - `gd` : Rendering kop surat, stempel, dan lampiran gambar
+  - `intl`, `zip`, `bcmath`, `curl`, `mbstring`, `fileinfo` : Manipulasi berkas & tata naskah
+- **Lokasi `php.ini` Herd Web & CLI:**
+  - File konfigurasi Herd: `C:\Users\<user>\.config\herd\bin\php85\php.ini`
+  - Jika di terminal CLI Windows `php -v` masih memanggil PHP lain (misal XAMPP), selaraskan sesi terminal dengan memprioritaskan Herd bin di PATH:
+    ```powershell
+    $env:PATH = "C:\Users\$env:USERNAME\.config\herd\bin;" + $env:PATH
+    ```
+    Konfirmasi versi dan file `php.ini` aktif:
+    ```powershell
+    php -v
+    php --ini
+    ```
+
 ---
 
 ## 🛡️ Keamanan & Kepatuhan

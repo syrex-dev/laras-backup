@@ -52,6 +52,12 @@ app/
   - Membaca dokumen/lampiran secara instan.
   - Melakukan aksi disposisi cepat, paraf, atau tanda tangan dalam $\le$ 3 ketukan layar.
 
+### 1.7 Pustaka Terpilih: QR Code & Generator PDF
+* **QR Code Engine: `simplesoftwareio/simple-qrcode` (BaconQrCode)**
+  - *Alasan Pemilihan:* Menghasilkan output SVG vektor dan PNG secara *in-memory* tanpa dependensi biner eksternal atau subprocess shell. Vektor SVG tidak pecah saat dicetak pada kop surat beresolusi tinggi, dapat di-embed langsung ke template Blade DomPDF, dan aman dari kerentanan injeksi shell perintah luar.
+* **PDF Generation Engine: `barryvdh/laravel-dompdf` (Dompdf)**
+  - *Alasan Pemilihan:* Render langsung dari view Blade standar Laravel dengan dukungan CSS paged media (`@page { size: A4 portrait; margin: 15mm; }`). Sangat portabel di semua sistem operasi (Windows Herd, Linux, Docker) tanpa memerlukan browser headless (Chromium/Puppeteer) atau wkhtmltopdf yang sering terhalang kebijakan keamanan server institusi. Berkas PDF bukti terima dan lembar disposisi yang dihasilkan berukuran sangat efisien (30–80 KB) sehingga hemat penyimpanan dan cepat dimuat pada jaringan mobile.
+
 ---
 
 ## 2. Diagram Alur Sistem (Mermaid)
