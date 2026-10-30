@@ -163,6 +163,70 @@ DB_PORT=5432 DB_DATABASE=ci_testing php artisan test -c phpunit.pgsql.xml
 
 ---
 
+## ⚙️ Worker Antrean & Scheduler (Tugas Terjadwal)
+
+Aplikasi E-Office mengandalkan pemrosesan latar belakang (*background job queue*) dan penjadwalan berkala (*task scheduler*) untuk menjaga performa HTTP tetap responsif saat menangani operasi berat seperti pengiriman email notifikasi, pengingat tenggat waktu, dan eskalasi naskah.
+
+### 1. Konfigurasi Environment (`.env` & `.env.example`)
+Pastikan variabel antrean dan surat elektronik telah dikonfigurasi dengan tepat:
+```ini
+# Koneksi Antrean (Queue)
+QUEUE_CONNECTION=database
+
+# Konfigurasi Pengiriman Email
+MAIL_MAILER=log               # Gunakan 'log' untuk dev lokal, 'smtp' untuk produksi
+MAIL_HOST=smtp.mailgun.org    # Atau server SMTP instansi
+MAIL_PORT=587
+MAIL_USERNAME=your_username
+MAIL_PASSWORD=your_password
+MAIL_ENCRYPTION=tls
+MAIL_FROM_ADDRESS="persuratan@contoh.ac.id"
+MAIL_FROM_NAME="${APP_NAME}"
+```
+
+### 2. Menjalankan Worker Antrean (`queue:work`)
+Worker antrean bertugas mengeksekusi job yang masuk ke tabel `jobs` (notifikasi email persuratan, rendering PDF asinkron, pembaruan indeks):
+```bash
+# Menjalankan worker di terminal:
+php artisan queue:work --tries=3 --timeout=90
+```
+- **Di Lingkungan Linux / Server Produksi:**
+  Gunakan **Supervisor** atau **Systemd** service agar worker terus berjalan sebagai daemon dan otomatis me-restart bila terjadi crash.
+- **Di Lingkungan Windows & Laravel Herd:**
+  - **Opsi Cepat Terminal**: Buka tab terminal baru di Herd dan jalankan `php artisan queue:work`.
+  - **Opsi Otomatis (Herd Pro)**: Buka jendela pengaturan Herd, tambahkan service latar belakang (*Background Services*) yang menjalankan `php artisan queue:work`.
+  - **Opsi Windows Service**: Pasang [NSSM (Non-Sucking Service Manager)](https://nssm.cc/) untuk mendaftarkan `php.bat artisan queue:work` sebagai Windows Service permanen.
+
+### 3. Menjalankan Task Scheduler (`schedule:run`)
+Scheduler mengotomatisasi tugas-tugas administratif berkala, seperti evaluasi tenggat waktu disposisi dan pemantauan eskalasi:
+```bash
+# Eksekusi scheduler satu putaran:
+php artisan schedule:run
+```
+- **Di Lingkungan Linux (Cron):**
+  Tambahkan satu baris entri pada crontab server (`crontab -e`):
+  ```cron
+  * * * * * cd /path/to/laras && php artisan schedule:run >> /dev/null 2>&1
+  ```
+- **Di Lingkungan Windows & Laravel Herd:**
+  - **Mode Pengembangan Lokal**: Jalankan perintah scheduler bawaan Laravel yang melakukan simulasi eksekusi cron setiap 1 menit:
+    ```powershell
+    php artisan schedule:work
+    ```
+  - **Windows Task Scheduler (Produksi Windows Server)**:
+    1. Buka *Task Scheduler* (`taskschd.msc`).
+    2. Buat *Basic Task* baru dengan nama `Laravel E-Office Scheduler`.
+    3. Trigger: *Daily*, ulangi (*Repeat task every*) **1 minute** tanpa batas waktu (*indefinitely*).
+    4. Action: *Start a program*, Program: `C:\Users\<user>\.config\herd\bin\php.bat` (atau `php.exe`), Arguments: `artisan schedule:run`, Start in: `d:\Coding\laras`.
+
+### 4. ⚠️ Dampak Kritis Bila Worker & Scheduler Tidak Aktif
+| Komponen | Status | Konsekuensi & Dampak Sistem |
+| :--- | :--- | :--- |
+| **Queue Worker** | ❌ **Mati** | • Notifikasi email penerimaan disposisi baru tidak terkirim ke pegawai.<br>• Notifikasi giliran paraf/persetujuan draf surat keluar tertahan di database (`jobs`).<br>• Beban antrean menumpuk dan menyebabkan lonjakan saat worker baru dinyalakan. |
+| **Scheduler** | ❌ **Mati** | • Pengingat otomatis H-1 tenggat waktu disposisi (`eoffice:remind-disposisi`) tidak pernah dieksekusi.<br>• Penandaan otomatis status *Overdue* / Terlambat pada disposisi yang melewati batas tanggal tidak berjalan.<br>• Pembersihan berkas draf kedaluwarsa dan sinkronisasi nomor urut tahunan tidak terpicu. |
+
+---
+
 ## 🛡️ Keamanan & Kepatuhan
 1. **Audit Log Append-Only & Hardening Database**:
    - Tabel `activity_logs` dilindungi dua lapis trigger PL/pgSQL database:
