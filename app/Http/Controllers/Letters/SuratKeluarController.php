@@ -437,6 +437,7 @@ class SuratKeluarController extends Controller
                 'qr_token' => null,
             ]);
             return redirect()->route('surat-keluar.show', $suratKeluar)
+                ->with('info', 'Surat keluar ditolak.')
                 ->with('success', 'Surat keluar berhasil ditolak.');
         }
 
@@ -447,6 +448,7 @@ class SuratKeluarController extends Controller
         $rejectAction->execute($actor, $suratKeluar, $alasan);
 
         return redirect()->route('surat-keluar.show', $suratKeluar)
+            ->with('info', 'Surat keluar ditolak.')
             ->with('success', 'Surat keluar berhasil ditolak.');
     }
 

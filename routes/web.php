@@ -49,7 +49,7 @@ Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 // -----------------------------------------------------------------------
 Route::middleware(['auth'])->group(function () {
     // Routes for Pimpinan signature management
-    Route::middleware(['role:Pimpinan'])->group(function () {
+    Route::middleware(['permission:surat-keluar.setujui'])->group(function () {
         Route::get('/profil/tanda-tangan', [TandaTanganController::class, 'index'])->name('profile.signature.index');
         Route::post('/profil/tanda-tangan', [TandaTanganController::class, 'store'])->name('profile.signature.store');
     });
@@ -70,8 +70,8 @@ Route::middleware(['auth'])->group(function () {
         return view('dashboard', compact('stats'));
     })->name('dashboard');
 
-    // Klasifikasi Surat (CRUD) - hanya Admin dan Sekretaris
-    Route::middleware(['role:Admin|Sekretaris'])->group(function () {
+    // Klasifikasi Surat (CRUD) - Petugas Arsip & Admin Instansi
+    Route::middleware(['permission:arsip.kelola'])->group(function () {
         Route::resource('klasifikasi-surat', KlasifikasiSuratController::class);
     });
 
@@ -85,9 +85,13 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('surat-masuk', SuratMasukController::class);
 
     // Surat Keluar
-    // PENTING: Route eksplisit (create, preview) HARUS didaftarkan SEBELUM resource route.
+    // PENTING: Route eksplisit (create, templates, preview) HARUS didaftarkan SEBELUM resource route.
     // Sebab resource()->only(['index','show']) mendaftarkan pola /surat-keluar/{suratKeluar}
-    // yang akan menelan string literal 'create' sebagai wildcard jika urutan terbalik.
+    // yang akan menelan string literal 'create' atau 'templates' sebagai wildcard jika urutan terbalik.
+    Route::middleware(['permission:surat-keluar.template|surat-keluar.kelola|organisasi.kelola'])->group(function () {
+        Route::post('/surat-keluar/templates/preview', [\App\Http\Controllers\SuratKeluar\TemplateSuratController::class, 'preview'])->name('surat-keluar.templates.preview');
+        Route::resource('surat-keluar/templates', \App\Http\Controllers\SuratKeluar\TemplateSuratController::class)->names('surat-keluar.templates');
+    });
 
     // --- Surat Keluar Fase 3A (Alur Persetujuan Berjenjang & Penomoran Resmi) ---
     Route::get('/surat-keluar/create', [SuratKeluarController::class, 'create'])->name('surat-keluar.create');
@@ -120,19 +124,17 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/disposisi/{disposisi}', [DisposisiController::class, 'show'])->name('disposisi.show');
     Route::patch('/disposisi/{disposisi}/status', [DisposisiController::class, 'updateStatus'])->name('disposisi.update-status');
 
-    // Pengaturan & Master Organisasi (Admin Instansi & Admin)
-    Route::middleware(['role:Admin|Admin Instansi'])->group(function () {
+    // Pengaturan & Master Organisasi (Admin Instansi via permission)
+    Route::middleware(['permission:organisasi.kelola'])->group(function () {
         Route::get('/pengaturan/profil', [InstitutionProfileController::class, 'edit'])->name('pengaturan.profil.edit');
         Route::put('/pengaturan/profil', [InstitutionProfileController::class, 'update'])->name('pengaturan.profil.update');
         Route::resource('users', UserController::class);
         Route::resource('unit-kerja', OrgUnitController::class);
         Route::resource('jabatan', PositionController::class);
-        Route::post('/surat-keluar/templates/preview', [\App\Http\Controllers\SuratKeluar\TemplateSuratController::class, 'preview'])->name('surat-keluar.templates.preview');
-        Route::resource('surat-keluar/templates', \App\Http\Controllers\SuratKeluar\TemplateSuratController::class)->names('surat-keluar.templates');
     });
 
-    // Admin Suite (Eksklusif: Admin)
-    Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['role:Admin']], function () {
+    // Admin Suite (Eksklusif: Admin Instansi via permission)
+    Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['permission:organisasi.kelola|sistem.pemeliharaan']], function () {
         Route::get('/logs', function () {
             return view('operations.logs.index');
         })->name('logs.index');
@@ -150,7 +152,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     // Template Surat Management
-    Route::middleware(['role:Admin|Sekretaris'])->group(function () {
+    Route::middleware(['permission:surat-keluar.template|surat-keluar.kelola'])->group(function () {
         Route::resource('template-surat', TemplateSuratController::class);
     });
 

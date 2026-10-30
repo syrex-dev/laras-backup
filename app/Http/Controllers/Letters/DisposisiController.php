@@ -81,13 +81,10 @@ class DisposisiController extends Controller
         $pengirimId = (int) $disposisi->pengirim_id;
 
         $isAdmin = $user->can('disposisi.kelola');
-        $canCreate = $user->can('disposisi.buat');
+        $isRecipient = $currentUserId === $penerimaId;
+        $isSender = $currentUserId === $pengirimId;
 
-        if (! $isAdmin && ! $canCreate && $currentUserId !== $penerimaId) {
-            abort(403, 'Unauthorized');
-        }
-
-        if ($canCreate && ! $isAdmin && $currentUserId !== $pengirimId) {
+        if (! $isAdmin && ! $isRecipient && ! $isSender) {
             abort(403, 'Unauthorized');
         }
 

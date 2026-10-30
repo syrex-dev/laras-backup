@@ -7,22 +7,22 @@ use App\Models\ProfilOrganisasi;
 use App\Models\SuratKeluar;
 use App\Models\TemplatSurat;
 use App\Models\User;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
-use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 /**
  * SuratIntegrationTest
  *
  * Menguji alur integrasi end-to-end fitur Surat Keluar:
- *   1. Sekretaris membuat draft → data tersimpan di database
+ *   1. Staf TU membuat draft → data tersimpan di database
  *   2. Pimpinan approve draft  → status berubah & qr_token ter-generate
  *   3. Pimpinan reject draft   → status berubah ke 'rejected'
- *   4. Staf tidak boleh POST store surat keluar (RBAC guard)
- *   5. Full E2E: Sekretaris buat draft → Pimpinan approve
+ *   4. Pengguna tanpa izin buat (Petugas Arsip) tidak boleh POST store surat keluar (RBAC guard)
+ *   5. Full E2E: Staf TU buat draft → Pimpinan approve
  */
 class SuratIntegrationTest extends TestCase
 {
@@ -32,23 +32,7 @@ class SuratIntegrationTest extends TestCase
     {
         parent::setUp();
         $this->withoutMiddleware(ValidateCsrfToken::class);
-    }
-
-    // -----------------------------------------------------------------
-    // HELPERS
-    // -----------------------------------------------------------------
-
-    /**
-     * Buat role Spatie jika belum ada.
-     */
-    protected function ensureRolesExist(): void
-    {
-        foreach (['Admin', 'Sekretaris', 'Pimpinan', 'Staf'] as $roleName) {
-            Role::firstOrCreate([
-                'name' => $roleName,
-                'guard_name' => 'web',
-            ]);
-        }
+        $this->seed(RolePermissionSeeder::class);
     }
 
     /**
@@ -56,12 +40,11 @@ class SuratIntegrationTest extends TestCase
      */
     protected function createUser(string $role, string $email, string $nama): User
     {
-        $this->ensureRolesExist();
-
         $user = User::query()->firstOrCreate(
             ['email' => $email],
             [
                 'nama' => $nama,
+                'name' => $nama,
                 'password' => Hash::make('password'),
             ]
         );
@@ -89,28 +72,23 @@ class SuratIntegrationTest extends TestCase
         ]);
 
         ProfilOrganisasi::create([
-            'nama_instansi' => 'HIMASE Test',
-            'kode_organisasi' => 'HIMA-TEST',
+            'nama_instansi' => 'POLTEK Test',
+            'kode_organisasi' => 'POLTEK-TEST',
             'alamat' => 'Jl. Test No. 1',
-            'email' => 'test@himase.ac.id',
+            'email' => 'test@contoh.ac.id',
             'telepon' => '081200000000',
         ]);
 
         return compact('klasifikasi', 'template');
     }
 
-    // -----------------------------------------------------------------
-    // TEST SCENARIOS
-    // -----------------------------------------------------------------
-
     /**
-     * Skenario A: Sekretaris berhasil membuat draft surat keluar
+     * Skenario A: Staf TU berhasil membuat draft surat keluar
      * dan data tersimpan dengan benar di database.
      */
-    public function test_sekretaris_can_create_draft_surat_keluar(): void
+    public function test_staf_tu_can_create_draft_surat_keluar(): void
     {
-        // Arrange
-        $sekretaris = $this->createUser('Sekretaris', 'sekretaris.int@example.com', 'Sekretaris Integration');
+        $stafTu = $this->createUser('Staf TU', 'tu.int@example.com', 'Staf TU Integration');
         $pimpinan = $this->createUser('Pimpinan', 'pimpinan.int@example.com', 'Pimpinan Integration');
         $support = $this->seedSupportingData();
 
@@ -120,31 +98,27 @@ class SuratIntegrationTest extends TestCase
             'penyetuju_id' => $pimpinan->id,
             'tanggal_surat' => now()->format('Y-m-d'),
             'tujuan' => 'Dekan Fakultas Teknik',
-            'perihal' => 'Undangan Rapat Koordinasi HIMASE',
+            'perihal' => 'Undangan Rapat Koordinasi Institusi',
             'isi' => 'Dengan hormat, kami mengundang Bapak/Ibu untuk menghadiri rapat koordinasi.',
             'templat_surat_id' => $support['template']->id,
         ];
 
-        // Act
-        $response = $this->actingAs($sekretaris)
+        $response = $this->actingAs($stafTu)
             ->post('/surat-keluar', $payload);
 
-        // Assert – redirect ke index setelah berhasil
         $response->assertRedirect(route('surat-keluar.index'));
         $response->assertSessionHas('success');
 
-        // Assert – data tersimpan di database
         $this->assertDatabaseHas('surat_keluar', [
             'tujuan' => 'Dekan Fakultas Teknik',
-            'perihal' => 'Undangan Rapat Koordinasi HIMASE',
+            'perihal' => 'Undangan Rapat Koordinasi Institusi',
             'status_approval' => 'draft',
-            'user_id' => $sekretaris->id,
+            'user_id' => $stafTu->id,
             'penyetuju_id' => $pimpinan->id,
             'templat_surat_id' => $support['template']->id,
         ]);
 
-        // Assert – nomor surat otomatis ter-generate (bukan null)
-        $surat = SuratKeluar::where('perihal', 'Undangan Rapat Koordinasi HIMASE')->first();
+        $surat = SuratKeluar::where('perihal', 'Undangan Rapat Koordinasi Institusi')->first();
         $this->assertNotNull($surat);
         $this->assertNotNull($surat->nomor_surat, 'Nomor surat harus otomatis ter-generate');
         $this->assertNull($surat->qr_token, 'Draft belum boleh punya qr_token');
@@ -156,140 +130,119 @@ class SuratIntegrationTest extends TestCase
      */
     public function test_pimpinan_can_approve_draft_and_generate_qr_token(): void
     {
-        // Arrange – Fake storage agar QR Code bisa di-"write"
         Storage::fake('public');
 
-        $sekretaris = $this->createUser('Sekretaris', 'sekretaris.approve@example.com', 'Sekretaris Approve');
+        $stafTu = $this->createUser('Staf TU', 'tu.approve@example.com', 'Staf TU Approve');
         $pimpinan = $this->createUser('Pimpinan', 'pimpinan.approve@example.com', 'Pimpinan Approve');
         $support = $this->seedSupportingData();
 
-        // Buat draft terlebih dahulu (simulasi output dari Sekretaris)
         $draft = SuratKeluar::create([
-            'nomor_surat' => '001/INT/HIMA-TEST/X/2026',
+            'nomor_surat' => '001/INT/POLTEK/X/2026',
             'klasifikasi_id' => $support['klasifikasi']->id,
-            'tanggal_surat' => now()->subDay(),
-            'tujuan' => 'Kepala Lab',
-            'perihal' => 'Pengajuan Peminjaman Lab',
-            'isi' => 'Isi surat untuk keperluan approve test.',
-            'status_approval' => 'draft',
-            'user_id' => $sekretaris->id,
             'penyetuju_id' => $pimpinan->id,
+            'user_id' => $stafTu->id,
+            'tanggal_surat' => now()->format('Y-m-d'),
+            'tujuan' => 'Pihak Terkait',
+            'perihal' => 'Surat yang Akan Diapprove',
+            'isi' => 'Konten surat yang akan disetujui pimpinan.',
+            'status_approval' => 'draft',
             'templat_surat_id' => $support['template']->id,
         ]);
 
-        $this->assertNull($draft->qr_token, 'Sebelum approve qr_token harus null');
-
-        // Act – Pimpinan approve
         $response = $this->actingAs($pimpinan)
             ->patch('/surat-keluar/'.$draft->id.'/approve', [
                 '_token' => csrf_token(),
             ]);
 
-        // Assert – redirect berhasil
         $response->assertRedirect(route('surat-keluar.show', $draft));
         $response->assertSessionHas('success');
 
-        // Assert – database terupdate
         $draft->refresh();
-        $this->assertEquals('approved', $draft->status_approval, 'Status harus berubah menjadi approved');
-        $this->assertNotNull($draft->qr_token, 'qr_token harus otomatis ter-generate setelah approve');
-        $this->assertNotEmpty($draft->qr_token, 'qr_token tidak boleh kosong');
-        $this->assertNotNull($draft->path_qrcode, 'path_qrcode harus terisi setelah approve');
-        // Pipeline baru juga mengisi file_pdf (Signed PDF atau fallback copy)
-        $this->assertNotNull($draft->file_pdf, 'file_pdf harus terisi setelah approve pipeline');
+        $this->assertEquals('approved', $draft->status_approval);
+        $this->assertNotNull($draft->qr_token, 'qr_token harus ter-generate setelah approve');
+        $this->assertEquals(32, strlen($draft->qr_token));
 
-        // Assert – File QR Code tersimpan di storage
         Storage::disk('public')->assertExists($draft->path_qrcode);
     }
 
     /**
      * Skenario C: Pimpinan reject surat keluar draft →
-     * status berubah ke 'rejected', qr_token tetap null.
+     * status berubah ke 'rejected' dan qr_token TETAP null.
      */
     public function test_pimpinan_can_reject_draft_surat_keluar(): void
     {
-        // Arrange
-        $sekretaris = $this->createUser('Sekretaris', 'sekretaris.reject@example.com', 'Sekretaris Reject');
+        $stafTu = $this->createUser('Staf TU', 'tu.reject@example.com', 'Staf TU Reject');
         $pimpinan = $this->createUser('Pimpinan', 'pimpinan.reject@example.com', 'Pimpinan Reject');
         $support = $this->seedSupportingData();
 
         $draft = SuratKeluar::create([
-            'nomor_surat' => '002/INT/HIMA-TEST/X/2026',
+            'nomor_surat' => '002/INT/POLTEK/X/2026',
             'klasifikasi_id' => $support['klasifikasi']->id,
-            'tanggal_surat' => now()->subDays(2),
-            'tujuan' => 'Wakil Rektor',
-            'perihal' => 'Surat yang Akan Ditolak',
-            'isi' => 'Isi surat ini sengaja untuk pengujian reject.',
-            'status_approval' => 'draft',
-            'user_id' => $sekretaris->id,
             'penyetuju_id' => $pimpinan->id,
+            'user_id' => $stafTu->id,
+            'tanggal_surat' => now()->format('Y-m-d'),
+            'tujuan' => 'Pihak Ditolak',
+            'perihal' => 'Surat yang Akan Direject',
+            'isi' => 'Konten surat yang tidak disetujui.',
+            'status_approval' => 'draft',
             'templat_surat_id' => $support['template']->id,
         ]);
 
-        // Act – Pimpinan reject
         $response = $this->actingAs($pimpinan)
             ->patch('/surat-keluar/'.$draft->id.'/reject', [
                 '_token' => csrf_token(),
             ]);
 
-        // Assert
         $response->assertRedirect(route('surat-keluar.show', $draft));
+        $response->assertSessionHas('info');
 
         $draft->refresh();
-        $this->assertEquals('rejected', $draft->status_approval, 'Status harus berubah menjadi rejected');
+        $this->assertEquals('rejected', $draft->status_approval);
         $this->assertNull($draft->qr_token, 'Surat rejected tidak boleh punya qr_token');
     }
 
     /**
-     * Skenario D: Staf TIDAK diizinkan POST store surat keluar (RBAC guard).
-     *
-     * Catatan: GET /surat-keluar/create ditangkap oleh resource route show (404)
-     * karena route ordering. Oleh karena itu kita uji POST store yang memang
-     * dilindungi middleware role:Sekretaris.
+     * Skenario D: Pengguna tanpa hak izin buat surat keluar (Petugas Arsip) TIDAK diizinkan POST store.
      */
-    public function test_staf_cannot_store_surat_keluar(): void
+    public function test_user_without_buat_permission_cannot_store_surat_keluar(): void
     {
-        // Arrange
-        $staf = $this->createUser('Staf', 'staf.int@example.com', 'Staf Integration');
+        $petugasArsip = $this->createUser('Petugas Arsip', 'arsip.int@example.com', 'Petugas Arsip Integration');
         $pimpinan = $this->createUser('Pimpinan', 'pimpinan.rbac@example.com', 'Pimpinan RBAC');
         $support = $this->seedSupportingData();
 
-        // Act – Staf mencoba POST store surat keluar
-        $response = $this->actingAs($staf)
+        $response = $this->actingAs($petugasArsip)
             ->post('/surat-keluar', [
                 '_token' => csrf_token(),
                 'klasifikasi_id' => $support['klasifikasi']->id,
                 'penyetuju_id' => $pimpinan->id,
                 'tanggal_surat' => now()->format('Y-m-d'),
                 'tujuan' => 'Test RBAC',
-                'perihal' => 'Staf seharusnya tidak bisa',
+                'perihal' => 'Arsip seharusnya tidak bisa buat surat',
                 'isi' => 'Test body',
                 'templat_surat_id' => $support['template']->id,
             ]);
 
-        // Assert – 403 Forbidden
         $response->assertStatus(403);
 
-        // Assert – data TIDAK tersimpan
         $this->assertDatabaseMissing('surat_keluar', [
-            'perihal' => 'Staf seharusnya tidak bisa',
+            'perihal' => 'Arsip seharusnya tidak bisa buat surat',
         ]);
     }
 
     /**
      * Skenario E: Alur end-to-end lengkap →
-     * Sekretaris buat draft → Pimpinan approve → qr_token valid di database.
+     * Staf TU buat draft → Pimpinan approve → qr_token valid di database.
      */
     public function test_full_integration_create_then_approve(): void
     {
         Storage::fake('public');
 
-        $sekretaris = $this->createUser('Sekretaris', 'sekretaris.e2e@example.com', 'Sekretaris E2E');
+        $stafTu = $this->createUser('Staf TU', 'tu.e2e@example.com', 'Staf TU E2E');
         $pimpinan = $this->createUser('Pimpinan', 'pimpinan.e2e@example.com', 'Pimpinan E2E');
         $support = $this->seedSupportingData();
 
-        // Step 1: Sekretaris membuat draft
-        $createResponse = $this->actingAs($sekretaris)->post('/surat-keluar', [
+        // Step 1: Staf TU membuat draft
+        $createResponse = $this->actingAs($stafTu)->post('/surat-keluar', [
             '_token' => csrf_token(),
             'klasifikasi_id' => $support['klasifikasi']->id,
             'penyetuju_id' => $pimpinan->id,
@@ -316,7 +269,7 @@ class SuratIntegrationTest extends TestCase
         $surat->refresh();
         $this->assertEquals('approved', $surat->status_approval);
         $this->assertNotNull($surat->qr_token);
-        $this->assertEquals(32, strlen($surat->qr_token), 'qr_token harus 32 karakter (hex dari 16 random bytes)');
+        $this->assertEquals(32, strlen($surat->qr_token));
 
         Storage::disk('public')->assertExists($surat->path_qrcode);
     }

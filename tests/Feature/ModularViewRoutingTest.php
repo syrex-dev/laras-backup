@@ -4,10 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\ProfilOrganisasi;
 use App\Models\User;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class ModularViewRoutingTest extends TestCase
@@ -18,37 +17,12 @@ class ModularViewRoutingTest extends TestCase
     {
         parent::setUp();
 
-        $rolePermissions = [
-            'Admin' => [
-                'surat-masuk.lihat', 'surat-masuk.registrasi', 'surat-masuk.ubah', 'surat-masuk.batalkan',
-                'disposisi.lihat', 'disposisi.buat', 'disposisi.teruskan', 'disposisi.tindaklanjut', 'disposisi.kelola',
-                'surat-keluar.lihat', 'surat-keluar.buat', 'organisasi.kelola',
-            ],
-            'Sekretaris' => [
-                'surat-masuk.lihat', 'surat-masuk.registrasi', 'disposisi.lihat',
-                'surat-keluar.lihat', 'surat-keluar.buat',
-            ],
-            'Pimpinan' => [
-                'surat-masuk.lihat', 'disposisi.lihat', 'disposisi.buat', 'disposisi.teruskan',
-                'surat-keluar.lihat', 'surat-keluar.periksa', 'surat-keluar.tandatangan',
-            ],
-            'Staf' => [
-                'surat-masuk.lihat', 'disposisi.lihat', 'disposisi.tindaklanjut',
-            ],
-        ];
-
-        foreach ($rolePermissions as $roleName => $perms) {
-            $role = Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);
-            foreach ($perms as $p) {
-                Permission::firstOrCreate(['name' => $p, 'guard_name' => 'web']);
-            }
-            $role->syncPermissions($perms);
-        }
+        $this->seed(RolePermissionSeeder::class);
 
         ProfilOrganisasi::create([
             'nama_instansi' => 'HIMASE Politeknik',
             'kode_organisasi' => 'HIMASE',
-            'email' => 'admin@himase.ac.id',
+            'email' => 'admin@contoh.ac.id',
             'alamat' => 'Jl. Pendidikan No. 1 Sumedang',
         ]);
     }
@@ -57,7 +31,7 @@ class ModularViewRoutingTest extends TestCase
     {
         $user = User::query()->create([
             'nama' => "User {$role}",
-            'email' => strtolower($role).'@example.com',
+            'email' => strtolower(str_replace(' ', '.', $role)).'@example.com',
             'password' => Hash::make('password'),
         ]);
 
@@ -68,16 +42,16 @@ class ModularViewRoutingTest extends TestCase
 
     public function test_all_modular_views_render_successfully_for_authorized_users(): void
     {
-        $admin = $this->createUserWithRole('Admin');
-        $sekretaris = $this->createUserWithRole('Sekretaris');
+        $admin = $this->createUserWithRole('Admin Instansi');
+        $stafTu = $this->createUserWithRole('Staf TU');
         $pimpinan = $this->createUserWithRole('Pimpinan');
 
         // 1. Letters Views (letters.surat-masuk, letters.surat-keluar, letters.disposisi)
-        $this->actingAs($sekretaris)->get(route('surat-masuk.index'))->assertOk();
-        $this->actingAs($sekretaris)->get(route('surat-masuk.create'))->assertOk();
-        $this->actingAs($sekretaris)->get(route('surat-keluar.index'))->assertOk();
-        $this->actingAs($sekretaris)->get(route('surat-keluar.create'))->assertOk();
-        $this->actingAs($sekretaris)->get(route('disposisi.index'))->assertOk();
+        $this->actingAs($stafTu)->get(route('surat-masuk.index'))->assertOk();
+        $this->actingAs($stafTu)->get(route('surat-masuk.create'))->assertOk();
+        $this->actingAs($stafTu)->get(route('surat-keluar.index'))->assertOk();
+        $this->actingAs($stafTu)->get(route('surat-keluar.create'))->assertOk();
+        $this->actingAs($stafTu)->get(route('disposisi.index'))->assertOk();
         $this->actingAs($pimpinan)->get(route('disposisi.create'))->assertOk();
 
         // 2. Organization Views (organization.users, organization.profile, organization.signature)

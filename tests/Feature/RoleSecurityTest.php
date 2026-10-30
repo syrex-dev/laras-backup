@@ -8,33 +8,28 @@ use App\Models\SuratKeluar;
 use App\Models\SuratMasuk;
 use App\Models\TemplatSurat;
 use App\Models\User;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
-use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class RoleSecurityTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected function ensureRolesExist(): void
+    protected function setUp(): void
     {
-        foreach (['Admin', 'Sekretaris', 'Pimpinan', 'Staf'] as $roleName) {
-            Role::firstOrCreate([
-                'name' => $roleName,
-                'guard_name' => 'web',
-            ]);
-        }
+        parent::setUp();
+        $this->seed(RolePermissionSeeder::class);
     }
 
     protected function createUser(string $role, string $email, string $nama): User
     {
-        $this->ensureRolesExist();
-
         $user = User::query()->firstOrCreate(
             ['email' => $email],
             [
                 'nama' => $nama,
+                'name' => $nama,
                 'password' => Hash::make('password'),
             ]
         );
@@ -53,20 +48,23 @@ class RoleSecurityTest extends TestCase
         ]);
     }
 
-    public function test_secretary_and_staff_are_forbidden_from_pimpinan_and_admin_routes(): void
+    public function test_staf_tu_and_kepala_unit_are_forbidden_from_pimpinan_and_admin_routes(): void
     {
-        $sekretaris = $this->createUser('Sekretaris', 'sekretaris.qa@example.com', 'Sekretaris QA');
-        $staf = $this->createUser('Staf', 'staf.qa@example.com', 'Staf QA');
+        $stafTu = $this->createUser('Staf TU', 'tu.qa@example.com', 'Staf TU QA');
+        $kepalaUnit = $this->createUser('Kepala Unit', 'kajur.qa@example.com', 'Kepala Unit QA');
 
-        $this->actingAs($sekretaris)
+        // Staf TU tidak boleh membuka tanda tangan pimpinan
+        $this->actingAs($stafTu)
             ->get('/profil/tanda-tangan')
             ->assertStatus(403);
 
-        $this->actingAs($staf)
+        // Kepala Unit tidak boleh membuat user baru (hanya Admin Instansi)
+        $this->actingAs($kepalaUnit)
             ->get('/users/create')
             ->assertStatus(403);
 
-        $this->actingAs($staf)
+        // Staf TU tidak boleh mengakses panel konfigurasi instansi
+        $this->actingAs($stafTu)
             ->get('/admin/profile')
             ->assertStatus(403);
     }
@@ -74,8 +72,8 @@ class RoleSecurityTest extends TestCase
     public function test_users_can_only_access_disposisi_assigned_to_their_own_id(): void
     {
         $pimpinan = $this->createUser('Pimpinan', 'pimpinan.qa@example.com', 'Pimpinan QA');
-        $sekretaris = $this->createUser('Sekretaris', 'sekretaris2.qa@example.com', 'Sekretaris QA 2');
-        $staf = $this->createUser('Staf', 'staf2.qa@example.com', 'Staf QA 2');
+        $stafTu = $this->createUser('Staf TU', 'tu2.qa@example.com', 'Staf TU QA 2');
+        $targetStaf = $this->createUser('Kepala Unit', 'target.qa@example.com', 'Target Kajur QA');
 
         $klasifikasi = $this->createKlasifikasi();
 
@@ -88,34 +86,34 @@ class RoleSecurityTest extends TestCase
             'perihal' => 'Surat untuk uji disposisi',
             'ringkasan' => 'Uji isolasi data disposisi',
             'status_ekstraksi_ai' => 'done',
-            'user_id' => $sekretaris->id,
+            'user_id' => $stafTu->id,
         ]);
 
         $disposisi = Disposisi::create([
             'surat_masuk_id' => $suratMasuk->id,
             'pengirim_id' => $pimpinan->id,
-            'penerima_id' => $staf->id,
+            'penerima_id' => $targetStaf->id,
             'instruksi' => 'Tindak lanjut dan selesaikan tugas ini.',
             'prioritas' => 'segera',
             'status' => 'belum_dibaca',
         ]);
 
-        $this->actingAs($sekretaris)
+        $this->actingAs($stafTu)
             ->get('/disposisi/'.$disposisi->id)
             ->assertStatus(403);
 
-        $this->actingAs($sekretaris)
+        $this->actingAs($stafTu)
             ->patch('/disposisi/'.$disposisi->id.'/status', [
                 '_token' => csrf_token(),
                 'status' => 'selesai',
             ])
             ->assertStatus(403);
 
-        $this->actingAs($staf)
+        $this->actingAs($targetStaf)
             ->get('/disposisi/'.$disposisi->id)
             ->assertOk();
 
-        $this->actingAs($staf)
+        $this->actingAs($targetStaf)
             ->patch('/disposisi/'.$disposisi->id.'/status', [
                 '_token' => csrf_token(),
                 'status' => 'selesai',
@@ -125,13 +123,13 @@ class RoleSecurityTest extends TestCase
         $this->assertDatabaseHas('disposisi', [
             'id' => $disposisi->id,
             'status' => 'selesai',
-            'penerima_id' => $staf->id,
+            'penerima_id' => $targetStaf->id,
         ]);
     }
 
-    public function test_secretary_edit_form_includes_template_selection_for_surat_keluar(): void
+    public function test_staf_tu_edit_form_includes_template_selection_for_surat_keluar(): void
     {
-        $sekretaris = $this->createUser('Sekretaris', 'sekretaris.template@example.com', 'Sekretaris Template');
+        $stafTu = $this->createUser('Staf TU', 'tu.template@example.com', 'Staf TU Template');
         $pimpinan = $this->createUser('Pimpinan', 'pimpinan.template@example.com', 'Pimpinan Template');
         $klasifikasi = $this->createKlasifikasi();
 
@@ -149,12 +147,12 @@ class RoleSecurityTest extends TestCase
             'isi' => 'Isi surat untuk validasi template edit',
             'status_approval' => 'draft',
             'file_pdf' => 'surat/edit.pdf',
-            'user_id' => $sekretaris->id,
+            'user_id' => $stafTu->id,
             'penyetuju_id' => $pimpinan->id,
             'templat_surat_id' => $template->id,
         ]);
 
-        $this->actingAs($sekretaris)
+        $this->actingAs($stafTu)
             ->get('/surat-keluar/'.$suratKeluar->id.'/edit')
             ->assertOk()
             ->assertSee('Template Surat')
@@ -164,7 +162,7 @@ class RoleSecurityTest extends TestCase
     public function test_public_verification_route_returns_200_for_valid_token_and_404_for_invalid_token(): void
     {
         $pimpinan = $this->createUser('Pimpinan', 'pimpinan.verify@example.com', 'Pimpinan Verify');
-        $sekretaris = $this->createUser('Sekretaris', 'sekretaris.verify@example.com', 'Sekretaris Verify');
+        $stafTu = $this->createUser('Staf TU', 'tu.verify@example.com', 'Staf TU Verify');
         $klasifikasi = $this->createKlasifikasi();
 
         $surat = SuratKeluar::create([
@@ -176,7 +174,7 @@ class RoleSecurityTest extends TestCase
             'isi' => 'Contoh isi surat untuk validasi QR',
             'status_approval' => 'approved',
             'file_pdf' => 'surat/verify.pdf',
-            'user_id' => $sekretaris->id,
+            'user_id' => $stafTu->id,
             'penyetuju_id' => $pimpinan->id,
             'qr_token' => 'VALID-QA-TOKEN-123',
         ]);
