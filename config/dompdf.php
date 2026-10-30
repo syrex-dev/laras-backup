@@ -78,7 +78,10 @@ return [
          * direct class use like:
          * $dompdf = new DOMPDF();  $dompdf->load_html($htmldata); $dompdf->render(); $pdfdata = $dompdf->output();
          */
-        'chroot' => public_path(),
+        'chroot' => [
+            base_path('public'),
+            storage_path('app/public'),
+        ],
 
         /**
          * Protocol whitelist
@@ -93,8 +96,6 @@ return [
         'allowed_protocols' => [
             'data://' => ['rules' => []],
             'file://' => ['rules' => []],
-            'http://' => ['rules' => []],
-            'https://' => ['rules' => []],
         ],
 
         /**
@@ -245,7 +246,7 @@ return [
          *
          * @var bool
          */
-        'enable_javascript' => true,
+        'enable_javascript' => false,
 
         /**
          * Enable remote file access
@@ -267,7 +268,7 @@ return [
          *
          * @var bool
          */
-        'enable_remote' => true,
+        'enable_remote' => false,
 
         /**
          * List of allowed remote hosts

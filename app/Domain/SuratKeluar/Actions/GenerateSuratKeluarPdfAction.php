@@ -68,7 +68,13 @@ class GenerateSuratKeluarPdfAction
             ->setPaper('a4', 'portrait')
             ->setOptions([
                 'isHtml5ParserEnabled' => true,
-                'isRemoteEnabled' => true,
+                'isRemoteEnabled' => false,
+                'isPhpEnabled' => false,
+                'isJavascriptEnabled' => false,
+                'chroot' => [
+                    base_path('public'),
+                    storage_path('app/public'),
+                ],
                 'defaultFont' => 'sans-serif',
             ]);
 

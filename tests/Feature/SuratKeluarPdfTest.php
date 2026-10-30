@@ -139,4 +139,38 @@ class SuratKeluarPdfTest extends TestCase
         $this->assertStringContainsString('Dr. Ir. Budi Santoso, M.T.', $view);
         $this->assertStringContainsString('197505122000031001', $view);
     }
+
+    public function test_pdf_generation_blocks_remote_assets_and_restricts_chroot(): void
+    {
+        $saveDraft = app(SaveDraftSuratKeluarAction::class);
+        $generatePdf = app(GenerateSuratKeluarPdfAction::class);
+
+        // Uji coba penyisipan aset jarak jauh dan berkas di luar chroot
+        $maliciousContent = <<<HTML
+            <p>Naskah Uji Keamanan Dompdf</p>
+            <img src="http://127.0.0.1:5433/probe-network-image.png" alt="probe-remote">
+            <img src="file:///etc/passwd" alt="probe-chroot">
+            <link rel="stylesheet" href="http://evil.com/untrusted.css">
+HTML;
+
+        $suratKeluar = $saveDraft->execute($this->creator, [
+            'template_id' => $this->template->id,
+            'klasifikasi_id' => $this->klasifikasi->id,
+            'org_unit_id' => $this->unit->id,
+            'penandatangan_id' => $this->signer->id,
+            'perihal' => 'Uji Sandbox Dompdf',
+            'tujuan' => 'Tim Keamanan Siber',
+            'isi_surat' => $maliciousContent,
+            'tanggal_surat' => '2026-10-30',
+        ]);
+
+        $result = $generatePdf->execute($suratKeluar, false);
+
+        $this->assertNotEmpty($result['pdf_binary']);
+        $this->assertStringStartsWith('%PDF-', $result['pdf_binary']);
+
+        // Pastikan tidak ada isi /etc/passwd seperti root:x:0:0 atau konten remote
+        $this->assertStringNotContainsString('root:x:0:0', $result['pdf_binary']);
+        $this->assertStringNotContainsString('probe-network-image', $result['pdf_binary']);
+    }
 }
