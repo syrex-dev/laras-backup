@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Disposisi;
+use App\Domain\Disposisi\Models\Disposisi;
 use App\Models\KlasifikasiSurat;
 use App\Models\SuratKeluar;
 use App\Models\SuratMasuk;

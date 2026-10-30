@@ -16,7 +16,7 @@ use App\Http\Controllers\Organization\PositionController;
 use App\Http\Controllers\Organization\TandaTanganController;
 use App\Http\Controllers\Organization\UserController;
 use App\Http\Controllers\Setup\SetupWizardController;
-use App\Models\Disposisi;
+use App\Domain\Disposisi\Models\Disposisi;
 use App\Models\KlasifikasiSurat;
 use App\Models\SuratKeluar;
 use App\Models\SuratMasuk;

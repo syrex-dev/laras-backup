@@ -2,7 +2,7 @@
 
 namespace App\Notifications;
 
-use App\Models\Disposisi;
+use App\Domain\Disposisi\Models\Disposisi;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 

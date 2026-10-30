@@ -3,7 +3,7 @@
 namespace App\Domain\Letters\Actions;
 
 use App\Domain\Letters\Support\DisposisiStatus;
-use App\Models\Disposisi;
+use App\Domain\Disposisi\Models\Disposisi;
 
 class UpdateDisposisiStatusAction
 {

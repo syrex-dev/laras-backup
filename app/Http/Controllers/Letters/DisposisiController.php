@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers\Letters;
 
-use App\Domain\Letters\Actions\CreateDisposisiAction;
+use App\Domain\Disposisi\Actions\CreateDisposisiAction;
+use App\Domain\Disposisi\Models\Disposisi;
 use App\Domain\Letters\Actions\UpdateDisposisiStatusAction;
 use App\Domain\Letters\Support\DisposisiStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Letters\StoreDisposisiRequest;
 use App\Http\Requests\Letters\UpdateDisposisiStatusRequest;
-use App\Models\Disposisi;
 use App\Models\SuratMasuk;
 use App\Models\User;
 use App\Notifications\DisposisiSelesai;
@@ -48,7 +48,24 @@ class DisposisiController extends Controller
 
     public function store(StoreDisposisiRequest $request, CreateDisposisiAction $createAction)
     {
-        $createAction->execute($request->validated(), Auth::id());
+        /** @var User $sender */
+        $sender = Auth::user();
+        $validated = $request->validated();
+        $suratMasuk = \App\Domain\SuratMasuk\Models\SuratMasuk::findOrFail($validated['surat_masuk_id']);
+
+        $createAction->execute(
+            sender: $sender,
+            suratMasuk: $suratMasuk,
+            data: [
+                'instruksi' => $validated['instruksi'] ?? 'Segera tindak lanjuti',
+                'catatan' => $validated['catatan'] ?? null,
+                'prioritas' => $validated['prioritas'] ?? 'biasa',
+                'tenggat_waktu' => $validated['tenggat_waktu'] ?? null,
+                'recipients' => [
+                    ['user_id' => $validated['penerima_id'] ?? null],
+                ],
+            ]
+        );
 
         return redirect()->route('disposisi.index')
             ->with('success', 'Disposisi berhasil dikirim.');

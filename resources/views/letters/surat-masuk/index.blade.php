@@ -37,7 +37,7 @@
     {{-- ── 2. Mantis Metric / Summary Cards ── --}}
     @php
         $totalMasuk = \App\Models\SuratMasuk::count();
-        $totalDisposisi = \App\Models\Disposisi::distinct('surat_masuk_id')->count('surat_masuk_id');
+        $totalDisposisi = \App\Domain\Disposisi\Models\Disposisi::distinct('surat_masuk_id')->count('surat_masuk_id');
         $belumDisposisi = max(0, $totalMasuk - $totalDisposisi);
     @endphp
     <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:18px; margin-bottom:24px;">

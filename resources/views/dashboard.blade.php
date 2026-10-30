@@ -7,7 +7,7 @@
     $user = Auth::user();
     $org = \App\Models\ProfilOrganisasi::first();
     $suratMasukTerbaru = \App\Models\SuratMasuk::with('klasifikasi')->latest()->take(5)->get();
-    $pendingTasks = \App\Models\Disposisi::with('suratMasuk')
+    $pendingTasks = \App\Domain\Disposisi\Models\Disposisi::with('suratMasuk')
         ->where('penerima_id', Auth::id())
         ->where('status', 'belum_dibaca')
         ->latest()

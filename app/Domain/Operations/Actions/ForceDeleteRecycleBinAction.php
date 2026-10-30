@@ -2,7 +2,7 @@
 
 namespace App\Domain\Operations\Actions;
 
-use App\Models\Disposisi;
+use App\Domain\Disposisi\Models\Disposisi;
 use App\Models\SuratKeluar;
 use App\Models\SuratMasuk;
 use Illuminate\Database\Eloquent\Model;

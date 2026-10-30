@@ -3,7 +3,7 @@
 namespace App\Domain\SuratMasuk\Models;
 
 use App\Domain\Pengguna\Models\OrgUnit;
-use App\Models\Disposisi;
+use App\Domain\Disposisi\Models\Disposisi;
 use App\Models\KlasifikasiSurat;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
