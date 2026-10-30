@@ -15,8 +15,6 @@ use Tests\TestCase;
 
 class SuratKeluarParallelApprovalTest extends TestCase
 {
-    use RefreshDatabase;
-
     public function test_parallel_approval_concurrency_on_postgresql(): void
     {
         if (DB::getDriverName() !== 'pgsql') {

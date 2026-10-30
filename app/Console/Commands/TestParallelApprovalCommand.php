@@ -77,6 +77,11 @@ class TestParallelApprovalCommand extends Command
             'status' => SuratKeluarApproval::STATUS_MENUNGGU,
         ]);
 
+        // Pastikan tidak ada transaksi terbuka agar proses anak dapat melihat data
+        while (DB::transactionLevel() > 0) {
+            DB::commit();
+        }
+
         $letterId = $surat->id;
         $approverId = $approver->id;
 
@@ -126,6 +131,10 @@ class TestParallelApprovalCommand extends Command
 
         $successCount = ($exit1 === 0 ? 1 : 0) + ($exit2 === 0 ? 1 : 0);
         $rejectedCount = ($exit1 !== 0 ? 1 : 0) + ($exit2 !== 0 ? 1 : 0);
+
+        // Bersihkan data pengujian
+        SuratKeluarApproval::where('surat_keluar_id', $letterId)->delete();
+        $freshSurat?->delete();
 
         if ($successCount === 1 && $rejectedCount === 1 && $approvedCount === 1 && ! empty($freshSurat->nomor_surat)) {
             $this->info("[PASS] Hanya satu approval dan satu nomor surat yang berhasil!");
