@@ -148,7 +148,36 @@ Aplikasi membutuhkan PHP 8.3+ (pada lingkungan pengembangan lokal ini menggunaka
 
 ---
 
+### 5. Konfigurasi Variabel Lingkungan Pengujian PostgreSQL
+File `phpunit.pgsql.xml` mendukung penyesuaian kredensial database dinamis melalui Environment Variables dengan nilai default lokal (`force="false"`):
+- `DB_HOST` (default: `127.0.0.1`)
+- `DB_PORT` (default: `5433`)
+- `DB_DATABASE` (default: `laras_test`)
+- `DB_USERNAME` (default: `postgres`)
+- `DB_PASSWORD` (default: `secret`)
+
+Untuk pipeline CI/CD atau pengujian di port/host lain, tetapkan variabel lingkungan terlebih dahulu:
+```bash
+DB_PORT=5432 DB_DATABASE=ci_testing php artisan test -c phpunit.pgsql.xml
+```
+
+---
+
 ## 🛡️ Keamanan & Kepatuhan
-1. **Audit Log Append-Only**: Tabel `activity_logs` dilindungi trigger level database (`BEFORE UPDATE OR DELETE`) yang menolak segala bentuk modifikasi atau manipulasi riwayat jejak audit secara langsung via SQL.
+1. **Audit Log Append-Only & Hardening Database**:
+   - Tabel `activity_logs` dilindungi dua lapis trigger PL/pgSQL database:
+     - `trg_activity_logs_no_update_delete` (`BEFORE UPDATE OR DELETE ON activity_logs FOR EACH ROW`)
+     - `trg_activity_logs_no_truncate` (`BEFORE TRUNCATE ON activity_logs FOR EACH STATEMENT`)
+   - **Panduan Pengerasan Lingkungan Produksi (Least Privilege Role):**
+     Di lingkungan produksi, koneksi aplikasi Laravel **TIDAK BOLEH** menggunakan akun `superuser` (`postgres`) atau pemilik tabel (*table owner*). Buat peran database terbatas khusus aplikasi:
+     ```sql
+     CREATE ROLE eoffice_app WITH LOGIN PASSWORD 'strong_app_password';
+     GRANT CONNECT ON DATABASE laras TO eoffice_app;
+     GRANT USAGE ON SCHEMA public TO eoffice_app;
+     GRANT SELECT, INSERT ON activity_logs TO eoffice_app;
+     -- PENTING: JANGAN PERNAH berikan hak UPDATE, DELETE, TRUNCATE, atau ALTER TABLE pada activity_logs
+     ```
+   - **Catatan Batasan Keamanan (*Known Limitation*):**
+     Trigger database secara efektif mencegah manipulasi dari aplikasi web atau injeksi SQL. Namun, akun dengan peran `superuser` atau `table owner` di PostgreSQL secara teknis memiliki otoritas untuk menjalankan `ALTER TABLE activity_logs DISABLE TRIGGER ALL` atau memanipulasi baris secara langsung via terminal database. Oleh karena itu, proteksi tingkat infrastruktur (rotasi password superuser, audit psql, pembatasan akses SSH ke host database) tetap menjadi keharusan dalam operasional produksi.
 2. **Entitlement Lisensi & Mode Baca-Saja**: Jika masa lisensi berakhir, sistem otomatis beralih ke mode baca-saja (*read-only*), memblokir mutasi baru sementara tetap mengizinkan login, logout, pencarian, dan ekspor data secara penuh.
 3. **RBAC Granular**: Setiap mutasi dilindungi perpaduan spatie permissions (`surat-masuk.registrasi`, `surat-masuk.batalkan`, dsb.) dan Laravel Policies.

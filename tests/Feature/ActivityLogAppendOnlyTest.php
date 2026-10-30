@@ -113,4 +113,21 @@ class ActivityLogAppendOnlyTest extends TestCase
             'id' => $log->id,
         ]);
     }
+
+    public function test_truncating_activity_log_via_raw_database_query_is_rejected_by_trigger(): void
+    {
+        if (DB::getDriverName() !== 'pgsql') {
+            $this->markTestSkipped('Perlindungan statement-level TRUNCATE trigger spesifik untuk PostgreSQL.');
+        }
+
+        ActivityLog::record(
+            action: 'security.check',
+            subject: 'System',
+            description: 'Uji perlindungan TRUNCATE audit log'
+        );
+
+        $this->expectException(\Throwable::class);
+
+        DB::statement('TRUNCATE activity_logs');
+    }
 }

@@ -344,7 +344,25 @@ CREATE TRIGGER trg_activity_logs_no_update_delete
 BEFORE UPDATE OR DELETE ON activity_logs
 FOR EACH ROW
 EXECUTE FUNCTION prevent_activity_logs_modification();
+
+-- Perlindungan TRUNCATE (Statement-level Trigger)
+CREATE OR REPLACE FUNCTION prevent_activity_logs_truncate()
+RETURNS TRIGGER AS $$
+BEGIN
+    RAISE EXCEPTION 'TABEL activity_logs BERSIFAT APPEND-ONLY: Operasi TRUNCATE dilarang.';
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_activity_logs_no_truncate
+BEFORE TRUNCATE ON activity_logs
+FOR EACH STATEMENT
+EXECUTE FUNCTION prevent_activity_logs_truncate();
 ```
+
+> **Catatan Keamanan Produksi:** Trigger di atas menghentikan operasi UPDATE, DELETE, dan TRUNCATE dari aplikasi. Namun pada PostgreSQL, user `SUPERUSER` atau owner tabel memiliki wewenang untuk menonaktifkan trigger (`ALTER TABLE ... DISABLE TRIGGER ALL`). Untuk lingkungan produksi, buat database role khusus aplikasi tanpa hak superuser, bukan pemilik tabel, dan hapus hak TRUNCATE/DROP trigger:
+> ```sql
+> REVOKE TRUNCATE ON activity_logs FROM eoffice_app;
+> ```
 
 ---
 
@@ -352,14 +370,20 @@ EXECUTE FUNCTION prevent_activity_logs_modification();
 
 ```sql
 -- Filter cepat Surat Masuk
-CREATE INDEX idx_surat_masuk_status_date ON surat_masuk (status, tanggal_terima DESC, klasifikasi_id);
+CREATE INDEX surat_masuk_tanggal_diterima_index ON surat_masuk (tanggal_diterima DESC);
+CREATE INDEX surat_masuk_status_sifat_index ON surat_masuk (status, sifat);
 CREATE INDEX idx_surat_masuk_agenda ON surat_masuk (nomor_agenda);
-CREATE INDEX idx_surat_masuk_fts ON surat_masuk USING gin(to_tsvector('indonesian', perihal || ' ' || pengirim));
+
+-- Full-Text Search (FTS) via Stored Generated tsvector + GIN Index
+-- Kolom tersimpan: search_vector tsvector GENERATED ALWAYS AS (to_tsvector('simple', coalesce(nomor_agenda, '') || ' ' || coalesce(nomor_surat, '') || ' ' || coalesce(pengirim, '') || ' ' || coalesce(perihal, '') || ' ' || coalesce(keterangan, ''))) STORED;
+CREATE INDEX surat_masuk_search_vector_gin ON surat_masuk USING gin(search_vector);
+-- Query aplikasi wajib menggunakan ekspresi yang cocok persis:
+-- WHERE search_vector @@ plainto_tsquery('simple', :keyword)
 
 -- Filter cepat Surat Keluar
 CREATE INDEX idx_surat_keluar_status_unit ON surat_keluar (status, org_unit_id, created_at DESC);
 CREATE INDEX idx_surat_keluar_penandatangan ON surat_keluar (penandatangan_id, status);
-CREATE INDEX idx_surat_keluar_fts ON surat_keluar USING gin(to_tsvector('indonesian', perihal || ' ' || isi_surat));
+CREATE INDEX idx_surat_keluar_fts ON surat_keluar USING gin(to_tsvector('simple', perihal || ' ' || isi_surat));
 
 -- Disposisi berjenjang & penerima
 CREATE INDEX idx_disposisi_parent ON disposisi (parent_disposisi_id);

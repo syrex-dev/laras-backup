@@ -20,6 +20,12 @@ class TestAgendaConcurrencyCommand extends Command
 
     public function handle(AgendaNumberService $service): int
     {
+        if (app()->isProduction()) {
+            $this->error('PERINGATAN KEAMANAN: Command pengujian konkurensi dilarang dijalankan di environment production!');
+
+            return Command::FAILURE;
+        }
+
         $year = (int) $this->option('year');
         $unit = (string) $this->option('unit');
         $perProcess = (int) $this->option('per-process');
@@ -59,7 +65,8 @@ class TestAgendaConcurrencyCommand extends Command
         $this->line("1. Sequence {$unit}-{$year} berhasil di-reset ke 0.");
 
         // 2. Siapkan proses anak
-        $phpBinary = PHP_BINARY;
+        $phpFinder = new \Symfony\Component\Process\PhpExecutableFinder;
+        $phpBinary = $phpFinder->find() ?: PHP_BINARY;
         $artisanPath = base_path('artisan');
 
         /** @var Process[] $processes */

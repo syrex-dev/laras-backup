@@ -22,6 +22,12 @@ class BenchmarkSuratMasukCommand extends Command
 
     public function handle(): int
     {
+        if (app()->isProduction()) {
+            $this->error('PERINGATAN KEAMANAN: Command benchmark pengujian beban data dilarang dijalankan di environment production!');
+
+            return Command::FAILURE;
+        }
+
         ini_set('memory_limit', '512M');
         DB::disableQueryLog();
 
@@ -225,7 +231,8 @@ class BenchmarkSuratMasukCommand extends Command
             $this->line("\n[Query 1: Filter Gabungan (status='terdaftar', sifat='penting')]:");
             $q1Plan = DB::select("
                 EXPLAIN (ANALYZE, BUFFERS)
-                SELECT * FROM surat_masuk
+                SELECT id, nomor_agenda, perihal, status, sifat, tanggal_diterima
+                FROM surat_masuk
                 WHERE status = 'terdaftar' AND sifat = 'penting'
                 ORDER BY tanggal_diterima DESC, id DESC
                 LIMIT 15
@@ -234,16 +241,24 @@ class BenchmarkSuratMasukCommand extends Command
                 $this->line('  '.$row->{'QUERY PLAN'});
             }
 
-            $this->line("\n[Query 2: Pencarian FTS GIN Index (Kementerian)]:");
-            $q2Plan = DB::select("
-                EXPLAIN (ANALYZE, BUFFERS)
-                SELECT * FROM surat_masuk
-                WHERE to_tsvector('simple', coalesce(search_text, '')) @@ to_tsquery('simple', 'Kementerian')
-                ORDER BY tanggal_diterima DESC, id DESC
-                LIMIT 15
-            ");
-            foreach ($q2Plan as $row) {
-                $this->line('  '.$row->{'QUERY PLAN'});
+            $cases = [
+                'Kasus 1: Kata Umum (Kementerian)' => 'Kementerian',
+                'Kasus 2: Kata Langka < 20 baris (Dokumen #99999)' => 'Dokumen #99999',
+                'Kasus 3: Kata Tidak Ada Hasil (KosongAbsolutXYZ999)' => 'KosongAbsolutXYZ999',
+            ];
+
+            foreach ($cases as $label => $keyword) {
+                $this->line("\n[Query FTS GIN Index - {$label}]:");
+                $plan = DB::select("
+                    EXPLAIN (ANALYZE, BUFFERS)
+                    SELECT id, nomor_agenda, perihal, tanggal_diterima
+                    FROM surat_masuk
+                    WHERE search_vector @@ plainto_tsquery('simple', '{$keyword}')
+                    LIMIT 15
+                ");
+                foreach ($plan as $row) {
+                    $this->line('  '.$row->{'QUERY PLAN'});
+                }
             }
         }
 

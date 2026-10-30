@@ -52,10 +52,23 @@ return new class extends Migration
             $table->index('sifat');
         });
 
-        // Index Full-Text di PostgreSQL untuk pencarian awal: perihal, pengirim, nomor_surat
+        // Index Full-Text di PostgreSQL untuk pencarian cepat: perihal, pengirim, nomor_surat, nomor_agenda, keterangan
         $driver = DB::getDriverName();
         if ($driver === 'pgsql') {
-            DB::statement('CREATE INDEX IF NOT EXISTS surat_masuk_fts_idx ON surat_masuk USING gin(to_tsvector(\'simple\', coalesce(search_text, \'\')));');
+            DB::statement("
+                ALTER TABLE surat_masuk 
+                ADD COLUMN IF NOT EXISTS search_vector tsvector 
+                GENERATED ALWAYS AS (
+                    to_tsvector('simple', 
+                        coalesce(nomor_agenda, '') || ' ' || 
+                        coalesce(nomor_surat, '') || ' ' || 
+                        coalesce(pengirim, '') || ' ' || 
+                        coalesce(perihal, '') || ' ' || 
+                        coalesce(keterangan, '')
+                    )
+                ) STORED;
+            ");
+            DB::statement('CREATE INDEX IF NOT EXISTS surat_masuk_search_vector_gin ON surat_masuk USING gin(search_vector);');
         } elseif ($driver === 'sqlite') {
             Schema::table('surat_masuk', function (Blueprint $table) {
                 $table->index('search_text');
@@ -104,6 +117,8 @@ return new class extends Migration
 
         $driver = DB::getDriverName();
         if ($driver === 'pgsql') {
+            DB::statement('DROP INDEX IF EXISTS surat_masuk_search_vector_gin;');
+            DB::statement('ALTER TABLE surat_masuk DROP COLUMN IF EXISTS search_vector;');
             DB::statement('DROP INDEX IF EXISTS surat_masuk_fts_idx;');
         }
 

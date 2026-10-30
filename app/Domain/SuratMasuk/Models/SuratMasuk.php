@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
@@ -105,13 +106,18 @@ class SuratMasuk extends Model
     {
         return $query
             ->when($filters['search'] ?? null, function ($query, $search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('search_text', 'LIKE', "%{$search}%")
-                        ->orWhere('nomor_agenda', 'LIKE', "%{$search}%")
-                        ->orWhere('nomor_surat', 'LIKE', "%{$search}%")
-                        ->orWhere('pengirim', 'LIKE', "%{$search}%")
-                        ->orWhere('perihal', 'LIKE', "%{$search}%");
-                });
+                if (DB::getDriverName() === 'pgsql') {
+                    $query->whereRaw("search_vector @@ plainto_tsquery('simple', ?)", [$search]);
+                } else {
+                    $query->where(function ($q) use ($search) {
+                        $q->where('nomor_agenda', 'LIKE', "%{$search}%")
+                            ->orWhere('nomor_surat', 'LIKE', "%{$search}%")
+                            ->orWhere('pengirim', 'LIKE', "%{$search}%")
+                            ->orWhere('perihal', 'LIKE', "%{$search}%")
+                            ->orWhere('keterangan', 'LIKE', "%{$search}%")
+                            ->orWhere('search_text', 'LIKE', "%{$search}%");
+                    });
+                }
             })
             ->when($filters['status'] ?? null, function ($query, $status) {
                 if ($status !== 'semua') {

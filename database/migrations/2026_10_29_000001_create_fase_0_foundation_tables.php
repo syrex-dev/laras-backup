@@ -170,6 +170,19 @@ return new class extends Migration
                 BEFORE UPDATE OR DELETE ON activity_logs
                 FOR EACH ROW
                 EXECUTE FUNCTION prevent_activity_logs_modification();
+
+                CREATE OR REPLACE FUNCTION prevent_activity_logs_truncate()
+                RETURNS TRIGGER AS \$\$
+                BEGIN
+                    RAISE EXCEPTION 'TABEL activity_logs BERSIFAT APPEND-ONLY: Operasi TRUNCATE dilarang.';
+                END;
+                \$\$ LANGUAGE plpgsql;
+
+                DROP TRIGGER IF EXISTS trg_activity_logs_no_truncate ON activity_logs;
+                CREATE TRIGGER trg_activity_logs_no_truncate
+                BEFORE TRUNCATE ON activity_logs
+                FOR EACH STATEMENT
+                EXECUTE FUNCTION prevent_activity_logs_truncate();
             ");
         } elseif ($driver === 'sqlite') {
             DB::unprepared("
