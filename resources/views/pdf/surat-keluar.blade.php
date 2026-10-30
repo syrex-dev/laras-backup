@@ -1,137 +1,212 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
     <meta charset="utf-8">
-    <title>Surat Keluar - {{ $surat->nomor_surat }}</title>
+    <title>{{ $surat->nomor_surat ?? 'Naskah Keluar' }}</title>
     <style>
-        body { font-family: 'Arial', sans-serif; font-size: 12pt; line-height: 1.5; color: #333; }
-        .header { text-align: center; border-bottom: 3px double #000; padding-bottom: 10px; margin-bottom: 20px; }
-        .header h1 { margin: 0; font-size: 18pt; text-transform: uppercase; }
-        .header p { margin: 0; font-size: 10pt; }
-        .content { margin-top: 20px; }
-        .info { margin-bottom: 20px; }
-        .footer { margin-top: 50px; }
-        .signature { float: right; text-align: center; width: 200px; }
-        .qr-code { margin-top: 10px; }
-        .clear { clear: both; }
+        @page {
+            size: A4 portrait;
+            margin: 20mm 20mm 20mm 20mm;
+        }
+        body {
+            font-family: 'DejaVu Sans', 'Arial', sans-serif;
+            font-size: 11pt;
+            line-height: 1.5;
+            color: #1a1a1a;
+            margin: 0;
+            padding: 0;
+        }
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+            border-bottom: 3px double #000000;
+            padding-bottom: 8px;
+            margin-bottom: 20px;
+        }
+        .header-logo {
+            width: 18%;
+            text-align: center;
+            vertical-align: middle;
+        }
+        .header-text {
+            width: 82%;
+            text-align: center;
+            vertical-align: middle;
+        }
+        .instansi-nama {
+            font-size: 15pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin: 0;
+            line-height: 1.2;
+        }
+        .instansi-detail {
+            font-size: 9pt;
+            color: #333333;
+            margin-top: 4px;
+            line-height: 1.3;
+        }
+        .meta-table {
+            width: 100%;
+            margin-bottom: 20px;
+            font-size: 11pt;
+        }
+        .meta-table td {
+            vertical-align: top;
+            padding: 2px 0;
+        }
+        .content-body {
+            margin-top: 15px;
+            margin-bottom: 30px;
+            text-align: justify;
+            font-size: 11pt;
+            line-height: 1.6;
+        }
+        .signature-table {
+            width: 100%;
+            margin-top: 40px;
+            page-break-inside: avoid;
+        }
+        .signature-box {
+            width: 48%;
+            float: right;
+            text-align: center;
+        }
+        .signature-placeholder {
+            border: 1px dashed #9ca3af;
+            background-color: #f9fafb;
+            color: #6b7280;
+            font-size: 9pt;
+            padding: 22px 10px;
+            margin: 12px auto;
+            width: 85%;
+            border-radius: 4px;
+        }
+        .signature-name {
+            font-weight: bold;
+            text-decoration: underline;
+            margin-bottom: 2px;
+        }
+        .signature-nip {
+            font-size: 10pt;
+            color: #4b5563;
+        }
+        .footer-note {
+            margin-top: 50px;
+            font-size: 8pt;
+            color: #9ca3af;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 4px;
+        }
     </style>
 </head>
 <body>
     @php
-        $profil = $profil ?? \App\Models\ProfilOrganisasi::first();
-        $isPreview = $isPreview ?? false;
-
-        /**
-         * Konversi path gambar yang tersimpan di DB menjadi Data URI Base64.
-         *
-         * Strategi resolusi (dicoba berurutan):
-         *   1. storage_path('app/public/' . $cleanPath)  ← path dari Storage::disk('public')->store()
-         *   2. public_path('storage/' . $cleanPath)      ← via symlink storage:link
-         *   3. Storage::disk('public')->path($cleanPath) ← Laravel Storage facade
-         *
-         * Format path yang didukung:
-         *   - 'organization/file.png'         (dari controller)
-         *   - 'storage/organization/file.png' (legacy dengan prefix)
-         *   - '/storage/organization/file.png' (dengan leading slash)
-         */
-        $toBase64DataUri = function ($path, $defaultMime = 'image/png') {
-            if (empty($path)) {
-                return null;
+        /** @var \App\Domain\Instansi\Models\InstitutionProfile $institution */
+        $institution = $institution ?? \App\Domain\Instansi\Models\InstitutionProfile::first() ?? \App\Domain\Instansi\Models\InstitutionProfile::current();
+        
+        $logoBase64 = null;
+        if (!empty($institution->logo_path)) {
+            $logoFile = storage_path('app/public/' . ltrim($institution->logo_path, '/'));
+            if (!file_exists($logoFile)) {
+                $logoFile = public_path('storage/' . ltrim($institution->logo_path, '/'));
             }
-
-            // Normalisasi: hapus leading slash dan prefix 'storage/' agar path bersih
-            $cleanPath = ltrim($path, '/');
-            $cleanPath = preg_replace('#^storage/#i', '', $cleanPath);
-
-            // Kandidat path fisik yang akan dicoba
-            $candidates = [
-                storage_path('app/public/' . $cleanPath),   // ← utama
-                public_path('storage/' . $cleanPath),        // ← via symlink
-                \Illuminate\Support\Facades\Storage::disk('public')->path($cleanPath), // ← facade
-            ];
-
-            $resolved = null;
-            foreach ($candidates as $candidate) {
-                if (file_exists($candidate) && is_file($candidate)) {
-                    $resolved = $candidate;
-                    break;
-                }
+            if (file_exists($logoFile) && is_file($logoFile)) {
+                $mime = mime_content_type($logoFile) ?: 'image/png';
+                $logoBase64 = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($logoFile));
             }
-
-            if (!$resolved) {
-                return null;
-            }
-
-            $mime = mime_content_type($resolved) ?: $defaultMime;
-            $content = file_get_contents($resolved);
-            if ($content === false) {
-                return null;
-            }
-
-            return 'data:' . $mime . ';base64,' . base64_encode($content);
-        };
-
-        $logoDataUri      = $toBase64DataUri(optional($profil)->path_logo ?? null);
-        $stempelDataUri   = $toBase64DataUri(optional($profil)->path_stempel ?? null);
-        $tandaTanganDataUri = null;
-        $tandaTanganPath  = optional(optional($surat->penyetuju)->tandaTangan)->path_tanda_tangan ?? null;
-        if (!empty($tandaTanganPath)) {
-            $tandaTanganDataUri = $toBase64DataUri($tandaTanganPath);
         }
     @endphp
-    <div class="header">
-        <table style="width: 100%;">
-            <tr>
-                <td style="width: 20%; text-align: left;">
-                    @if($logoDataUri)
-                        <img src="{{ $logoDataUri }}" style="height: 80px;">
-                    @else
-                        <h2 style="margin: 0; padding: 20px; border: 1px solid #000;">LOGO</h2>
-                    @endif
-                </td>
-                <td style="width: 80%; text-align: center;">
-                    <h1>{{ $profil->nama_instansi ?? 'HIMASE' }}</h1>
-                    <p>{{ $profil->alamat ?? 'Alamat Instansi, Gedung Organisasi Mahasiswa, Kampus Politeknik' }}</p>
-                    <p style="margin: 0; font-size: 10pt;">
-                        Email: {{ $profil->email ?? 'himase@mardira.ac.id' }} | 
-                        Kontak: {{ $profil->telepon ?? '(022) 1234567' }}
-                    </p>
-                </td>
-            </tr>
-        </table>
-    </div>
 
-    <div class="content">
-        {!! $kontenTemplate !!}
-    </div>
-
-    <table style="width: 100%; margin-top: 50px; border: none;">
+    {{-- KOP SURAT RESMI INSTANSI --}}
+    <table class="header-table">
         <tr>
-            <td style="width: 60%;"></td>
-            <td style="width: 40%; text-align: center; vertical-align: top;">
-                <p style="margin: 0; margin-bottom: 2px;">Jatiwangi, {{ $surat->tanggal_surat ? \Carbon\Carbon::parse($surat->tanggal_surat)->format('d F Y') : now()->format('d F Y') }}</p>
-                <p style="margin: 0; margin-bottom: 5px;">Mengetahui,</p>
-                <p style="margin: 0;"><strong>Ketua Umum HIMASE</strong></p>
-
-                <div style="margin: 15px 0; min-height: 80px;">
-                    @if(isset($qrCode) && !empty($qrCode))
-                        <img src="data:image/svg+xml;base64,{{ base64_encode($qrCode) }}" width="90">
-                    @elseif($tandaTanganDataUri)
-                        <img src="{{ $tandaTanganDataUri }}" style="height: 80px;">
-                    @else
-                        <br><br><br><span style="color: gray; font-size: 11px;">[Menunggu Pengesahan]</span><br><br>
-                    @endif
-
-                    @if($stempelDataUri)
-                        <img src="{{ $stempelDataUri }}" style="height: 60px; margin-top: 10px;">
-                    @endif
+            @if($logoBase64)
+                <td class="header-logo">
+                    <img src="{{ $logoBase64 }}" style="max-height: 75px; max-width: 90px;" alt="Logo">
+                </td>
+            @endif
+            <td class="header-text" @if(!$logoBase64) style="width: 100%;" @endif>
+                <div class="instansi-nama">{{ $institution->name ?? 'POLITEKNIK CONTOH INDONESIA' }}</div>
+                <div class="instansi-detail">
+                    {{ $institution->address ?? 'Jl. Pendidikan Tinggi No. 1' }}<br>
+                    Telepon: {{ $institution->phone ?? '(021) 1234567' }} | Email: {{ $institution->email ?? 'info@kampus.ac.id' }}
+                    @if(!empty($institution->website)) | Laman: {{ $institution->website }} @endif
                 </div>
-
-                <p style="margin: 0;"><strong><u>{{ $surat->penyetuju->nama ?? 'Nama Pimpinan' }}</u></strong></p>
             </td>
         </tr>
     </table>
+
+    {{-- METADATA SURAT --}}
+    <table class="meta-table">
+        <tr>
+            <td style="width: 15%;">Nomor</td>
+            <td style="width: 3%;">:</td>
+            <td style="width: 47%; font-weight: bold;">{{ $surat->nomor_surat ?? '(Draf Belum Bernomor)' }}</td>
+            <td style="width: 35%; text-align: right;">
+                {{ $tanggalFormatted ?? ($surat->tanggal_surat ? \Carbon\Carbon::parse($surat->tanggal_surat)->locale('id')->isoFormat('D MMMM Y') : now()->locale('id')->isoFormat('D MMMM Y')) }}
+            </td>
+        </tr>
+        <tr>
+            <td>Sifat</td>
+            <td>:</td>
+            <td>{{ ucfirst($surat->sifat ?? 'Biasa') }}</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Lampiran</td>
+            <td>:</td>
+            <td>{{ !empty($surat->lampiran) ? $surat->lampiran : ($surat->attachments->count() > 0 ? $surat->attachments->count() . ' Berkas' : '-') }}</td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Hal</td>
+            <td>:</td>
+            <td style="font-weight: bold;">{{ $surat->perihal }}</td>
+            <td></td>
+        </tr>
+    </table>
+
+    {{-- TUJUAN PENERIMA --}}
+    <div style="margin-top: 15px; margin-bottom: 20px;">
+        Yth. <strong>{{ $surat->tujuan }}</strong><br>
+        di Tempat
+    </div>
+
+    {{-- BADAN NASKAH / ISI SURAT --}}
+    <div class="content-body">
+        {!! $renderedContent !!}
+    </div>
+
+    {{-- AREA TANDA TANGAN (PLACEHOLDER FASE 3B) --}}
+    <table class="signature-table">
+        <tr>
+            <td style="width: 50%;"></td>
+            <td style="width: 50%; text-align: center; vertical-align: top;">
+                <div style="font-weight: 500; margin-bottom: 4px;">
+                    {{ $jabatanPenandatangan ?? 'Pimpinan Instansi' }},
+                </div>
+
+                {{-- Placeholder visual tanda tangan dinas (Fase 3B) --}}
+                <div class="signature-placeholder">
+                    <strong>[AREA TANDA TANGAN ELEKTRONIK / BASAH]</strong><br>
+                    <span style="font-size: 8pt; color: #9ca3af;">(Divalidasi pada Fase 3B: TTE / Segel Elektronik)</span>
+                </div>
+
+                <div class="signature-name">
+                    {{ $surat->penandatangan->name ?? $namaPenandatangan ?? 'Nama Pimpinan' }}
+                </div>
+                @if(!empty($surat->penandatangan?->nip))
+                    <div class="signature-nip">NIP. {{ $surat->penandatangan->nip }}</div>
+                @endif
+            </td>
+        </tr>
+    </table>
+
+    {{-- CATATAN KAKI DOKUMEN SISTEM --}}
+    <div class="footer-note">
+        Dokumen resmi diterbitkan melalui Sistem Persuratan Digital &bull; Dokumen sah dan terverifikasi secara internal &bull; ID: #{{ $surat->id }}
+    </div>
 </body>
 </html>
-
-
