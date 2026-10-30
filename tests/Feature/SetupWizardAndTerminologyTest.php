@@ -149,9 +149,9 @@ class SetupWizardAndTerminologyTest extends TestCase
             ],
         ]);
 
-        $adminRole = Role::firstOrCreate(['name' => 'Admin Instansi']);
+        (new \Database\Seeders\RolePermissionSeeder())->run();
         $admin = User::factory()->create(['name' => 'Admin Polban', 'email' => 'admin@polban.ac.id']);
-        $admin->assignRole($adminRole);
+        $admin->assignRole('Admin Instansi');
 
         // Ubah istilah dinamis: "Jurusan" -> "Departemen", "Direktur" -> "Rektor", "Ketua Jurusan" -> "Kepala Departemen"
         $response = $this->actingAs($admin)->put('/pengaturan/profil', [

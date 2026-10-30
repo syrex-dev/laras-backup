@@ -287,6 +287,11 @@ class ProductionRbacAndRouteCoverageTest extends TestCase
                     continue;
                 }
 
+                // Abaikan command penampil matriks itu sendiri agar string contoh regex tidak ikut terambil
+                if (str_contains($file->getRealPath(), 'ShowPermissionsMatrixCommand.php')) {
+                    continue;
+                }
+
                 $content = file_get_contents($file->getRealPath());
 
                 // Match ->can('something.here') atau ->can("something.here")
