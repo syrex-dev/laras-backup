@@ -8,7 +8,7 @@ import { Modal } from '@/Components/Modal';
 import { useTerminology } from '@/Hooks/useTerminology';
 import {
     ArrowLeft, Printer, Download, Eye, Ban, Edit2, FileText, CheckCircle2,
-    Clock, ShieldAlert, History, AlertTriangle, X
+    Clock, ShieldAlert, History, AlertTriangle, X, QrCode
 } from 'lucide-react';
 
 interface AttachmentItem {
@@ -136,6 +136,12 @@ export default function Show({ surat, auditLogs, disposisiChain = [] }: ShowProp
                     </div>
 
                     <div className="flex items-center flex-wrap gap-2">
+                        <Link href={`/lacak-surat/${surat.qr_token || surat.id}`}>
+                            <Button variant="secondary" size="sm" icon={<QrCode className="w-4 h-4 text-emerald-600" />}>
+                                Lacak QR
+                            </Button>
+                        </Link>
+
                         <a
                             href={`/surat-masuk/${surat.id}/print-disposisi`}
                             target="_blank"

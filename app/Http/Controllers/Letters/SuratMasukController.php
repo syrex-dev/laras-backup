@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Letters;
 
 use App\Domain\Audit\Models\ActivityLog;
+use App\Domain\Disposisi\Models\Disposisi;
+use App\Domain\Disposisi\Models\DisposisiRecipient;
 use App\Domain\Pengguna\Models\OrgUnit;
 use App\Domain\SuratMasuk\Models\SuratMasuk;
 use App\Domain\SuratMasuk\Models\SuratMasukAttachment;
@@ -294,5 +296,83 @@ class SuratMasukController extends Controller
 
         return redirect()->route('surat-masuk.index')
             ->with('success', "Surat masuk agenda {$nomorAgenda} berhasil dihapus.");
+    }
+
+    /**
+     * Pelacakan naskah dinas & riwayat disposisi via QR Code token.
+     * Wajib terautentikasi dan memiliki hak akses (surat-masuk.lihat atau disposisi.lihat).
+     */
+    public function lacak(Request $request, string $token)
+    {
+        $suratMasuk = SuratMasuk::where('qr_token', $token)
+            ->orWhere('id', is_numeric($token) ? (int) $token : 0)
+            ->firstOrFail();
+
+        $user = $request->user();
+        if (! $user->can('surat-masuk.lihat') && ! $user->can('disposisi.lihat')) {
+            abort(403, 'Anda tidak memiliki hak akses untuk melacak naskah dinas ini.');
+        }
+
+        // Posisi surat saat ini
+        $location = 'Bagian Tata Usaha Persuratan';
+        $holder = 'Staf Tata Usaha';
+        $statusLabel = 'Menunggu Disposisi Pimpinan';
+        $isOverdue = false;
+        $deadline = null;
+
+        if ($suratMasuk->status === 'didisposisikan') {
+            $latestRecipient = DisposisiRecipient::with(['recipientUser', 'recipientPosition', 'delegatedUser'])
+                ->whereHas('disposisi', fn ($q) => $q->where('surat_masuk_id', $suratMasuk->id))
+                ->whereNotIn('status', ['selesai', 'ditolak'])
+                ->orderBy('id', 'desc')
+                ->first();
+
+            if ($latestRecipient) {
+                $location = $latestRecipient->recipientPosition?->name
+                    ?? $latestRecipient->recipientUser?->position?->name
+                    ?? 'Unit Pelaksana';
+                $holder = $latestRecipient->display_name;
+                $statusLabel = 'Dalam Proses Pelaksanaan: '.ucfirst($latestRecipient->status);
+                $isOverdue = $latestRecipient->is_overdue;
+                $deadline = $latestRecipient->tenggat_waktu?->format('Y-m-d H:i');
+            } else {
+                $location = 'Pimpinan / Unit Terkait';
+                $holder = 'Dalam Penelaahan';
+                $statusLabel = 'Didisposisikan';
+            }
+        } elseif ($suratMasuk->status === 'selesai') {
+            $location = 'Unit Kearsipan Dinamis';
+            $holder = 'Petugas Arsip';
+            $statusLabel = 'Selesai Dilaksanakan & Diarsipkan';
+        } elseif ($suratMasuk->status === 'dibatalkan') {
+            $location = 'Arsip Naskah Batal';
+            $holder = '-';
+            $statusLabel = 'Dibatalkan';
+        }
+
+        $disposisiChain = Disposisi::with([
+            'pemberi:id,name',
+            'pemberiPosition:id,name',
+            'recipients.recipientUser:id,name',
+            'recipients.recipientPosition:id,name',
+            'recipients.delegatedUser:id,name',
+            'recipients.followups.user:id,name',
+            'recipients.followups.attachments',
+        ])
+        ->where('surat_masuk_id', $suratMasuk->id)
+        ->orderBy('created_at', 'asc')
+        ->get();
+
+        return Inertia::render('SuratMasuk/Tracking', [
+            'surat' => $suratMasuk,
+            'currentPosition' => [
+                'location' => $location,
+                'holder' => $holder,
+                'status_label' => $statusLabel,
+                'is_overdue' => $isOverdue,
+                'deadline' => $deadline,
+            ],
+            'disposisiChain' => $disposisiChain,
+        ]);
     }
 }

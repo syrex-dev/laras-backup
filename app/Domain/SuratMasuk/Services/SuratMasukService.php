@@ -220,7 +220,7 @@ class SuratMasukService
     public function renderLembarDisposisiPdf(SuratMasuk $suratMasuk)
     {
         $institution = InstitutionProfile::current();
-        $trackingUrl = route('surat-masuk.show', $suratMasuk->id);
+        $trackingUrl = route('surat-masuk.lacak', $suratMasuk->qr_token ?: $suratMasuk->id);
 
         $qrCodeSvg = QrCode::format('svg')->size(100)->generate($trackingUrl);
         $qrCodeBase64 = 'data:image/svg+xml;base64,'.base64_encode($qrCodeSvg);

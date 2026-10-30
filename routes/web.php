@@ -81,6 +81,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/surat-masuk/{suratMasuk}/attachments/{attachment}/preview', [SuratMasukController::class, 'previewAttachment'])->name('surat-masuk.attachment.preview');
     Route::get('/surat-masuk/{suratMasuk}/print-disposisi', [SuratMasukController::class, 'printLembarDisposisi'])->name('surat-masuk.print-disposisi');
     Route::get('/surat-masuk/{suratMasuk}/print-bukti', [SuratMasukController::class, 'printBuktiTerima'])->name('surat-masuk.print-bukti');
+    Route::get('/lacak-surat/{token}', [SuratMasukController::class, 'lacak'])->name('surat-masuk.lacak');
     Route::resource('surat-masuk', SuratMasukController::class);
 
     // Surat Keluar
