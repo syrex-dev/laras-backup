@@ -51,14 +51,22 @@ class SaveDraftSuratKeluarAction
 
     protected function createDraft(User $actor, array $data, array $files): SuratKeluar
     {
+        $legacyTemplateId = $data['templat_surat_id'] ?? null;
+        if ($legacyTemplateId && (! DB::getSchemaBuilder()->hasTable('templat_surat') || ! DB::table('templat_surat')->where('id', $legacyTemplateId)->exists())) {
+            $legacyTemplateId = null;
+        }
+
         $templateId = $data['template_id'] ?? null;
+        if (! $templateId && isset($data['templat_surat_id']) && TemplateSurat::where('id', $data['templat_surat_id'])->exists()) {
+            $templateId = $data['templat_surat_id'];
+        }
         if ($templateId && ! TemplateSurat::where('id', $templateId)->exists()) {
             $templateId = null;
         }
 
         $suratKeluar = SuratKeluar::create([
             'template_id' => $templateId,
-            'templat_surat_id' => $data['templat_surat_id'] ?? null,
+            'templat_surat_id' => $legacyTemplateId,
             'klasifikasi_id' => $data['klasifikasi_id'],
             'org_unit_id' => $data['org_unit_id'] ?? $actor->position?->org_unit_id,
             'user_id' => $actor->id,
