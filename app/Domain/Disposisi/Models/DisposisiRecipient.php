@@ -103,6 +103,31 @@ class DisposisiRecipient extends Model
     }
 
     /**
+     * Label teks pendelegasian resmi "atas nama jabatan X"
+     */
+    public function getDelegationLabelAttribute(): string
+    {
+        if ($this->is_delegated && $this->recipientPosition) {
+            return "atas nama jabatan {$this->recipientPosition->name}";
+        }
+
+        return '';
+    }
+
+    /**
+     * Nama tampilan penerima disertai indikator Plt bila sedang didelegasikan
+     */
+    public function getDisplayNameAttribute(): string
+    {
+        if ($this->is_delegated && $this->delegatedUser) {
+            $posName = $this->recipientPosition?->name ?? 'Jabatan';
+            return "{$this->delegatedUser->name} (Plt. {$posName})";
+        }
+
+        return $this->recipientUser?->name ?? $this->recipientPosition?->name ?? 'Penerima';
+    }
+
+    /**
      * Memeriksa apakah tindak lanjut penerima telah melewati tenggat waktu
      */
     public function isOverdue(): bool
