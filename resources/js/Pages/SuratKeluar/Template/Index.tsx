@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
+import DOMPurify from 'dompurify';
 import { AppLayout } from '@/Layouts/AppLayout';
 import { Card } from '@/Components/Card';
 import { Button } from '@/Components/Button';
@@ -308,6 +309,7 @@ export default function Index({ templates, filters, supportedVariables, institut
                             <Link
                                 key={idx}
                                 href={link.url || '#'}
+                                /* Label paginasi aman dari Laravel (misal: &laquo; Sebelumnya / Berikutnya &raquo;) dan bukan input pengguna */
                                 dangerouslySetInnerHTML={{ __html: link.label }}
                                 className={`px-3 py-1.5 text-xs rounded-md border ${
                                     link.active
@@ -492,7 +494,7 @@ export default function Index({ templates, filters, supportedVariables, institut
                     ) : (
                         <div
                             className="p-4 bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-700 text-xs leading-relaxed max-h-80 overflow-y-auto"
-                            dangerouslySetInnerHTML={{ __html: previewContent }}
+                            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(previewContent) }}
                         />
                     )}
 

@@ -62,4 +62,9 @@ class TemplateSurat extends Model
     {
         return $query->where('jenis', $jenis);
     }
+
+    public function setKontenDefaultAttribute(?string $value): void
+    {
+        $this->attributes['konten_default'] = app(\App\Services\HtmlSanitizer::class)->sanitize($value);
+    }
 }

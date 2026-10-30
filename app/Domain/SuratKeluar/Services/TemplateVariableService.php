@@ -43,18 +43,20 @@ class TemplateVariableService
         $rawJabatan = $context['jabatan_penandatangan'] ?? '';
         $jabatanPenandatangan = $this->resolveTerminology($rawJabatan, $terminology);
 
+        $escape = fn ($val) => htmlspecialchars((string) $val, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+
         $replacements = [
-            '{nomor_surat}' => $context['nomor_surat'] ?? '[Nomor Surat Akan Terbit]',
-            '{tanggal_surat}' => $tanggalSurat,
-            '{perihal}' => $context['perihal'] ?? '[Perihal Naskah Dinas]',
-            '{tujuan}' => $context['tujuan'] ?? '[Tujuan Surat / Penerima]',
-            '{nama_penandatangan}' => $context['nama_penandatangan'] ?? '[Nama Penandatangan]',
-            '{jabatan_penandatangan}' => $jabatanPenandatangan ?: '[Jabatan Penandatangan]',
-            '{unit_pembuat}' => $context['unit_pembuat'] ?? '[Unit Kerja]',
-            '{nama_instansi}' => $institution->name ?? 'Politeknik Contoh Indonesia',
-            '{alamat_instansi}' => $institution->address ?? 'Jl. Telekomunikasi No. 1, Bandung',
-            '{email_instansi}' => $institution->email ?? 'persuratan@contoh.ac.id',
-            '{telepon_instansi}' => $institution->phone ?? '(022) 1234567',
+            '{nomor_surat}' => $escape($context['nomor_surat'] ?? '[Nomor Surat Akan Terbit]'),
+            '{tanggal_surat}' => $escape($tanggalSurat),
+            '{perihal}' => $escape($context['perihal'] ?? '[Perihal Naskah Dinas]'),
+            '{tujuan}' => $escape($context['tujuan'] ?? '[Tujuan Surat / Penerima]'),
+            '{nama_penandatangan}' => $escape($context['nama_penandatangan'] ?? '[Nama Penandatangan]'),
+            '{jabatan_penandatangan}' => $escape($jabatanPenandatangan ?: '[Jabatan Penandatangan]'),
+            '{unit_pembuat}' => $escape($context['unit_pembuat'] ?? '[Unit Kerja]'),
+            '{nama_instansi}' => $escape($institution->name ?? 'Politeknik Contoh Indonesia'),
+            '{alamat_instansi}' => $escape($institution->address ?? 'Jl. Telekomunikasi No. 1, Bandung'),
+            '{email_instansi}' => $escape($institution->email ?? 'persuratan@contoh.ac.id'),
+            '{telepon_instansi}' => $escape($institution->phone ?? '(022) 1234567'),
         ];
 
         return strtr($content, $replacements);

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Head, Link, useForm, router } from '@inertiajs/react';
+import DOMPurify from 'dompurify';
 import { AppLayout } from '@/Layouts/AppLayout';
 import { Card } from '@/Components/Card';
 import { Button } from '@/Components/Button';
@@ -264,7 +265,7 @@ export default function Show({
 
                             {/* Badan Isi Surat */}
                             <div className="py-2 text-sm leading-relaxed prose dark:prose-invert max-w-none min-h-[160px]"
-                                dangerouslySetInnerHTML={{ __html: suratKeluar.isi_surat || '<p className="italic text-gray-400">Tidak ada isi naskah.</p>' }}
+                                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(suratKeluar.isi_surat || '<p class="italic text-gray-400">Tidak ada isi naskah.</p>') }}
                             />
 
                             {/* Area Tanda Tangan Placeholder */}
@@ -627,7 +628,7 @@ export default function Show({
                                     </p>
                                     <div
                                         className="max-h-60 overflow-y-auto p-3 bg-gray-50 dark:bg-gray-900 rounded-lg text-xs prose dark:prose-invert max-w-none border border-gray-200 dark:border-gray-700"
-                                        dangerouslySetInnerHTML={{ __html: selectedVersion.isi_surat }}
+                                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(selectedVersion.isi_surat) }}
                                     />
                                     <div className="flex justify-end pt-2">
                                         <Button variant="outline" size="sm" onClick={() => setActionModal(null)}>Tutup</Button>

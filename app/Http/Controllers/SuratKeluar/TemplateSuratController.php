@@ -86,6 +86,9 @@ class TemplateSuratController extends Controller
             ]);
         }
 
+        $sanitizer = app(\App\Services\HtmlSanitizer::class);
+        $validated['konten_default'] = $sanitizer->sanitize($validated['konten_default']);
+
         $usedVars = $this->variableService->extractVariables($validated['konten_default']);
 
         $template = TemplateSurat::create([
@@ -126,6 +129,9 @@ class TemplateSuratController extends Controller
                 'konten_default' => 'Terdapat variabel yang tidak didukung: ' . implode(', ', $unsupported),
             ]);
         }
+
+        $sanitizer = app(\App\Services\HtmlSanitizer::class);
+        $validated['konten_default'] = $sanitizer->sanitize($validated['konten_default']);
 
         $usedVars = $this->variableService->extractVariables($validated['konten_default']);
 
@@ -192,6 +198,7 @@ class TemplateSuratController extends Controller
         ];
 
         $rendered = $this->variableService->render($content ?: '', $sampleContext);
+        $rendered = app(\App\Services\HtmlSanitizer::class)->sanitize($rendered);
 
         return response()->json([
             'rendered' => $rendered,

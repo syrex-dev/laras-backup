@@ -435,6 +435,7 @@ export default function Index({
                             <Link
                                 key={idx}
                                 href={link.url || '#'}
+                                /* Label paginasi aman dari Laravel (misal: &laquo; Sebelumnya / Berikutnya &raquo;) dan bukan input pengguna */
                                 dangerouslySetInnerHTML={{ __html: link.label }}
                                 className={`px-3 py-1.5 text-xs rounded-md border ${
                                     link.active

@@ -174,6 +174,23 @@ class SuratKeluar extends Model
         return $this->attributes['templat_surat_id'] ?? $this->attributes['template_id'] ?? null;
     }
 
+    public function setIsiSuratAttribute(?string $value): void
+    {
+        $sanitized = app(\App\Services\HtmlSanitizer::class)->sanitize($value);
+        $this->attributes['isi_surat'] = $sanitized;
+        $this->attributes['isi'] = $sanitized;
+    }
+
+    public function setPerihalAttribute(?string $value): void
+    {
+        $this->attributes['perihal'] = $value !== null ? strip_tags($value) : null;
+    }
+
+    public function setTujuanAttribute(?string $value): void
+    {
+        $this->attributes['tujuan'] = $value !== null ? strip_tags($value) : null;
+    }
+
     public function setTemplatSuratIdAttribute($value): void
     {
         if (\Illuminate\Support\Facades\Schema::hasColumn($this->getTable(), 'templat_surat_id')) {

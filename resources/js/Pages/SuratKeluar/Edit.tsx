@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
+import DOMPurify from 'dompurify';
 import { AppLayout } from '@/Layouts/AppLayout';
 import { Card } from '@/Components/Card';
 import { Button } from '@/Components/Button';
@@ -221,7 +222,7 @@ export default function Edit({
                                 {previewMode ? (
                                     <div
                                         className="w-full min-h-[240px] p-4 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg text-sm prose dark:prose-invert max-w-none"
-                                        dangerouslySetInnerHTML={{ __html: data.isi_surat }}
+                                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(data.isi_surat) }}
                                     />
                                 ) : (
                                     <textarea

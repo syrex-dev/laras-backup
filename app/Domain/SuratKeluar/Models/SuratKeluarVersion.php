@@ -46,4 +46,19 @@ class SuratKeluarVersion extends Model
     {
         return $this->belongsTo(User::class, 'user_id');
     }
+
+    public function setIsiSuratAttribute(?string $value): void
+    {
+        $this->attributes['isi_surat'] = app(\App\Services\HtmlSanitizer::class)->sanitize($value);
+    }
+
+    public function setPerihalAttribute(?string $value): void
+    {
+        $this->attributes['perihal'] = $value !== null ? strip_tags($value) : null;
+    }
+
+    public function setTujuanAttribute(?string $value): void
+    {
+        $this->attributes['tujuan'] = $value !== null ? strip_tags($value) : null;
+    }
 }
