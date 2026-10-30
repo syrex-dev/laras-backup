@@ -26,100 +26,9 @@ class PoliteknikDemoSeeder extends Seeder
         }
 
         // -------------------------------------------------------------------
-        // 1. Roles & Permissions Granular (Sesuai SOP Persuratan)
+        // 1. Roles & Permissions Granular (Sesuai SOP Persuratan & PRD)
         // -------------------------------------------------------------------
-        $permissions = [
-            'surat-masuk.lihat',
-            'surat-masuk.registrasi',
-            'surat-masuk.ubah',
-            'surat-masuk.batalkan',
-            'disposisi.lihat',
-            'disposisi.buat',
-            'disposisi.teruskan',
-            'disposisi.tindaklanjut',
-            'surat-keluar.lihat',
-            'surat-keluar.buat',
-            'surat-keluar.periksa',
-            'surat-keluar.penomoran',
-            'surat-keluar.tandatangan',
-            'surat-keluar.setujui',
-            'surat-keluar.batalkan',
-            'surat-keluar.kelola',
-            'arsip.lihat',
-            'arsip.kelola',
-            'organisasi.kelola',
-            'pengaturan.kelola',
-            'lisensi.kelola',
-        ];
-
-        foreach ($permissions as $permName) {
-            Permission::firstOrCreate(['name' => $permName, 'guard_name' => 'web']);
-        }
-
-        // Sesuai PRD Bagian 6: Admin Instansi, Pimpinan, Kepala Unit, Staf TU, Petugas Arsip
-        $rolesData = [
-            'Admin Instansi' => $permissions,
-            'Admin' => $permissions,
-            'Pimpinan' => [
-                'surat-masuk.lihat',
-                'disposisi.lihat',
-                'disposisi.buat',
-                'disposisi.teruskan',
-                'surat-keluar.lihat',
-                'surat-keluar.periksa',
-                'surat-keluar.tandatangan',
-                'surat-keluar.setujui',
-                'surat-keluar.batalkan',
-                'arsip.lihat',
-            ],
-            'Kepala Unit' => [
-                'surat-masuk.lihat',
-                'disposisi.lihat',
-                'disposisi.teruskan',
-                'disposisi.tindaklanjut',
-                'surat-keluar.lihat',
-                'surat-keluar.buat',
-                'surat-keluar.periksa',
-                'arsip.lihat',
-            ],
-            'Staf TU' => [
-                'surat-masuk.lihat',
-                'surat-masuk.registrasi',
-                'surat-masuk.ubah',
-                'surat-masuk.batalkan',
-                'disposisi.lihat',
-                'disposisi.tindaklanjut',
-                'surat-keluar.lihat',
-                'surat-keluar.buat',
-                'surat-keluar.penomoran',
-                'arsip.lihat',
-            ],
-            'Sekretaris' => [
-                'surat-masuk.lihat',
-                'surat-masuk.registrasi',
-                'surat-keluar.lihat',
-                'surat-keluar.buat',
-                'surat-keluar.penomoran',
-                'disposisi.lihat',
-            ],
-            'Petugas Arsip' => [
-                'surat-masuk.lihat',
-                'surat-keluar.lihat',
-                'arsip.lihat',
-                'arsip.kelola',
-            ],
-            'Staf' => [
-                'surat-masuk.lihat',
-                'disposisi.lihat',
-                'disposisi.tindaklanjut',
-                'surat-keluar.lihat',
-            ],
-        ];
-
-        foreach ($rolesData as $roleName => $rolePerms) {
-            $role = Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);
-            $role->syncPermissions($rolePerms);
-        }
+        $this->call(RolePermissionSeeder::class);
 
         // -------------------------------------------------------------------
         // 2. Profil Instansi Fiktif ("Politeknik Contoh", contoh.ac.id)
@@ -148,10 +57,10 @@ class PoliteknikDemoSeeder extends Seeder
         // -------------------------------------------------------------------
         // 3. Status Lisensi (Paket Standar Aktif)
         // -------------------------------------------------------------------
-        $license = LicenseState::current();
+        $license = LicenseState::first() ?? LicenseState::current();
         $license->update([
             'license_key' => 'LIC-CONTOH-STANDAR-2026-ACTIVE',
-            'institution_slug' => 'politeknik-contoh',
+            'institution_slug' => 'poltek-demo',
             'plan' => 'standar',
             'status' => 'active',
             'expires_at' => Carbon::now()->addYear(),
@@ -168,7 +77,7 @@ class PoliteknikDemoSeeder extends Seeder
                 'api' => false,
             ],
             'last_verified_at' => Carbon::now(),
-            'signature_hash' => hash('sha256', 'LIC-CONTOH-STANDAR-2026-ACTIVE|politeknik-contoh|active'),
+            'signature_hash' => hash('sha256', 'LIC-CONTOH-STANDAR-2026-ACTIVE|poltek-demo|active'),
         ]);
 
         // -------------------------------------------------------------------
@@ -247,7 +156,7 @@ class PoliteknikDemoSeeder extends Seeder
                 'nip' => '198501012010121001',
                 'phone' => '081234567890',
                 'position_id' => null,
-                'roles' => ['Admin Instansi', 'Admin'],
+                'roles' => ['Admin Instansi'],
             ],
             [
                 'email' => 'direktur@contoh.ac.id',
@@ -279,7 +188,7 @@ class PoliteknikDemoSeeder extends Seeder
                 'nip' => '199002142014042001',
                 'phone' => '081234567894',
                 'position_id' => $posStafTu->id,
-                'roles' => ['Staf TU', 'Sekretaris', 'Staf'],
+                'roles' => ['Staf TU'],
             ],
             [
                 'email' => 'arsip@contoh.ac.id',
@@ -295,7 +204,7 @@ class PoliteknikDemoSeeder extends Seeder
                 'nip' => '198204122005011002',
                 'phone' => '081234567896',
                 'position_id' => $posKaprodiD4->id,
-                'roles' => ['Kepala Unit', 'Staf'],
+                'roles' => ['Kepala Unit'],
             ],
         ];
 

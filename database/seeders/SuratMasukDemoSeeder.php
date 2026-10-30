@@ -33,11 +33,11 @@ class SuratMasukDemoSeeder extends Seeder
         $klasifikasiList = KlasifikasiSurat::all();
         if ($klasifikasiList->isEmpty()) {
             $klasifikasiList = collect([
-                KlasifikasiSurat::create(['kode_klasifikasi' => 'HM.01', 'nama' => 'Hubungan Masyarakat & Kerjasama']),
-                KlasifikasiSurat::create(['kode_klasifikasi' => 'KU.01', 'nama' => 'Keuangan & Anggaran DIPA']),
-                KlasifikasiSurat::create(['kode_klasifikasi' => 'KP.02', 'nama' => 'Kepegawaian & Ketenagaan']),
-                KlasifikasiSurat::create(['kode_klasifikasi' => 'AK.01', 'nama' => 'Akademik & Kurikulum']),
-                KlasifikasiSurat::create(['kode_klasifikasi' => 'RT.01', 'nama' => 'Rumah Tangga & Perlengkapan BMN']),
+                KlasifikasiSurat::firstOrCreate(['kode_klasifikasi' => 'HM.01'], ['nama' => 'Hubungan Masyarakat & Kerjasama']),
+                KlasifikasiSurat::firstOrCreate(['kode_klasifikasi' => 'KU.01'], ['nama' => 'Keuangan & Anggaran DIPA']),
+                KlasifikasiSurat::firstOrCreate(['kode_klasifikasi' => 'KP.02'], ['nama' => 'Kepegawaian & Ketenagaan']),
+                KlasifikasiSurat::firstOrCreate(['kode_klasifikasi' => 'AK.01'], ['nama' => 'Akademik & Kurikulum']),
+                KlasifikasiSurat::firstOrCreate(['kode_klasifikasi' => 'RT.01'], ['nama' => 'Rumah Tangga & Perlengkapan BMN']),
             ]);
         }
 
@@ -106,25 +106,27 @@ class SuratMasukDemoSeeder extends Seeder
             $isBatal = ($status === 'dibatalkan');
             $alasanBatal = $isBatal ? 'Naskah ditarik kembali oleh pihak pengirim karena revisi lampiran.' : null;
 
-            $surat = SuratMasuk::create([
-                'nomor_agenda' => $nomorAgenda,
-                'nomor_surat' => $nomorSurat,
-                'klasifikasi_id' => $klasifikasi->id,
-                'unit_tujuan_id' => $unit?->id,
-                'tanggal_surat' => $tglSurat,
-                'tanggal_diterima' => $tglTerima,
-                'pengirim' => $sender,
-                'perihal' => $perihal,
-                'sifat' => $sifat,
-                'jenis' => $jenis,
-                'status' => $status,
-                'keterangan' => "Dicatat secara otomatis oleh demo seeder pada nomor agenda {$nomorAgenda}.",
-                'alasan_batal' => $alasanBatal,
-                'dibatalkan_oleh_id' => $isBatal ? $tuUser->id : null,
-                'dibatalkan_pada' => $isBatal ? $now->copy()->subDays($daysAgo - 1) : null,
-                'qr_token' => Str::random(32),
-                'user_id' => $tuUser->id,
-            ]);
+            $surat = SuratMasuk::firstOrCreate(
+                ['nomor_agenda' => $nomorAgenda],
+                [
+                    'nomor_surat' => $nomorSurat,
+                    'klasifikasi_id' => $klasifikasi->id,
+                    'unit_tujuan_id' => $unit?->id,
+                    'tanggal_surat' => $tglSurat,
+                    'tanggal_diterima' => $tglTerima,
+                    'pengirim' => $sender,
+                    'perihal' => $perihal,
+                    'sifat' => $sifat,
+                    'jenis' => $jenis,
+                    'status' => $status,
+                    'keterangan' => "Dicatat secara otomatis oleh demo seeder pada nomor agenda {$nomorAgenda}.",
+                    'alasan_batal' => $alasanBatal,
+                    'dibatalkan_oleh_id' => $isBatal ? $tuUser->id : null,
+                    'dibatalkan_pada' => $isBatal ? $now->copy()->subDays($daysAgo - 1) : null,
+                    'qr_token' => Str::random(32),
+                    'user_id' => $tuUser->id,
+                ]
+            );
 
             // Tambahkan contoh lampiran pada 40% surat
             if ($i % 3 === 0) {

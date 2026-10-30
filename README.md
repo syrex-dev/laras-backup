@@ -27,13 +27,28 @@ npm install
 php artisan key:generate
 ```
 
-### 3. Migrasi & Data Uji Percontohan (Demo Seeder)
+### 3. Migrasi Database & Seeding
+
+#### A. Lingkungan Produksi (Production Install)
+Instalasi produksi **TIDAK** memakai seeder demo. Pada server produksi (`APP_ENV=production`), inisialisasi basis data dilakukan dengan:
 ```bash
-# Jalankan migrasi dan isi data demo Politeknik Contoh Indonesia
+# Jalankan migrasi tabel
+php artisan migrate --force
+
+# Jalankan seeder produksi (Role PRD, Permission, Klasifikasi Arsip, Master Templat)
+php artisan db:seed --class=ProductionSeeder --force
+```
+> [!IMPORTANT]
+> `ProductionSeeder` bersifat idempoten dan aman produksi (tanpa akun pengguna, tanpa surat demo, dan tanpa menandai instansi terkonfigurasi). Setelah menjalankan seeder produksi, akses `/setup` di browser untuk menjalankan **Setup Wizard** guna mendaftarkan Administrator Instansi pertama dan konfigurasi profil organisasi awal.
+
+#### B. Lingkungan Pengembangan Lokal (Local / Testing QA)
+Untuk pengujian dan pengembangan lokal dengan contoh data instansi fiktif (*Politeknik Contoh Indonesia*):
+```bash
+# Jalankan migrasi dan isi seluruh data acuan + dataset demo
 php artisan migrate:fresh --seed
 ```
 > [!NOTE]
-> `PoliteknikDemoSeeder` dilindungi pengaman sistem dan **HANYA** dapat dijalankan di environment `local` atau `testing`.
+> `DemoSeeder` dan seluruh seeder demo di dalamnya dilindungi pengaman sistem ketat (`app()->environment(['local', 'testing'])`) dan akan **ditolak/dilewati otomatis** apabila dijalankan di luar environment `local` atau `testing`.
 
 ### 4. Menjalankan Server Pengembangan
 ```bash
