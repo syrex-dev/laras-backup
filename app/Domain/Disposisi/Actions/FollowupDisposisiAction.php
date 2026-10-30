@@ -35,13 +35,17 @@ class FollowupDisposisiAction
         array $data,
         ?UploadedFile $attachment = null
     ): DisposisiFollowup {
-        // 1. Validasi wewenang: harus penerima sah (definitif atau Plt) atau Admin
+        // 1. Validasi wewenang: harus penerima sah (definitif atau Plt) atau Admin/Manager
         $effectiveUser = $recipient->effectiveUser();
         $isRecipient = $effectiveUser && $effectiveUser->id === $user->id;
-        $isAdmin = $user->hasRole(['Admin Instansi', 'Admin']);
+        $isGlobalAdmin = $user->can('disposisi.kelola');
 
-        if (! $isRecipient && ! $isAdmin && ! $user->can('disposisi.tindaklanjut')) {
-            throw new AuthorizationException('Anda tidak memiliki wewenang untuk menindaklanjuti disposisi ini.');
+        if (! $user->can('disposisi.tindaklanjut')) {
+            throw new AuthorizationException('Anda tidak memiliki wewenang untuk menindaklanjuti disposisi.');
+        }
+
+        if (! $isRecipient && ! $isGlobalAdmin) {
+            throw new AuthorizationException('Anda bukan penerima sah untuk menindaklanjuti disposisi ini.');
         }
 
         // 2. Validasi status perubahan

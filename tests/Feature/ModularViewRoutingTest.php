@@ -6,6 +6,7 @@ use App\Models\ProfilOrganisasi;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -17,8 +18,31 @@ class ModularViewRoutingTest extends TestCase
     {
         parent::setUp();
 
-        foreach (['Admin', 'Sekretaris', 'Pimpinan', 'Staf'] as $roleName) {
-            Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);
+        $rolePermissions = [
+            'Admin' => [
+                'surat-masuk.lihat', 'surat-masuk.registrasi', 'surat-masuk.ubah', 'surat-masuk.batalkan',
+                'disposisi.lihat', 'disposisi.buat', 'disposisi.teruskan', 'disposisi.tindaklanjut', 'disposisi.kelola',
+                'surat-keluar.lihat', 'surat-keluar.buat', 'organisasi.kelola',
+            ],
+            'Sekretaris' => [
+                'surat-masuk.lihat', 'surat-masuk.registrasi', 'disposisi.lihat',
+                'surat-keluar.lihat', 'surat-keluar.buat',
+            ],
+            'Pimpinan' => [
+                'surat-masuk.lihat', 'disposisi.lihat', 'disposisi.buat', 'disposisi.teruskan',
+                'surat-keluar.lihat', 'surat-keluar.periksa', 'surat-keluar.tandatangan',
+            ],
+            'Staf' => [
+                'surat-masuk.lihat', 'disposisi.lihat', 'disposisi.tindaklanjut',
+            ],
+        ];
+
+        foreach ($rolePermissions as $roleName => $perms) {
+            $role = Role::firstOrCreate(['name' => $roleName, 'guard_name' => 'web']);
+            foreach ($perms as $p) {
+                Permission::firstOrCreate(['name' => $p, 'guard_name' => 'web']);
+            }
+            $role->syncPermissions($perms);
         }
 
         ProfilOrganisasi::create([

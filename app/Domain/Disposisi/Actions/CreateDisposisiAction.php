@@ -29,7 +29,7 @@ class CreateDisposisiAction
     public function execute(User $sender, SuratMasuk $suratMasuk, array $data): Disposisi
     {
         // 1. Validasi wewenang pimpinan
-        if (! $sender->can('disposisi.buat') && ! $sender->hasRole(['Admin Instansi', 'Admin', 'Pimpinan'])) {
+        if (! $sender->can('disposisi.buat')) {
             throw new AuthorizationException('Anda tidak memiliki wewenang untuk membuat disposisi naskah.');
         }
 

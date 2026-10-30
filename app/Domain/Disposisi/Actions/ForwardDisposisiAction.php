@@ -31,13 +31,13 @@ class ForwardDisposisiAction
     public function execute(User $sender, DisposisiRecipient $parentRecipient, array $data): Disposisi
     {
         // 1. Validasi wewenang penerus
-        if (! $sender->can('disposisi.teruskan') && ! $sender->hasRole(['Admin Instansi', 'Admin', 'Pimpinan', 'Kepala Unit'])) {
+        if (! $sender->can('disposisi.teruskan')) {
             throw new AuthorizationException('Anda tidak memiliki wewenang untuk meneruskan disposisi.');
         }
 
         $effectiveUser = $parentRecipient->effectiveUser();
         $isRecipientUser = $effectiveUser && $effectiveUser->id === $sender->id;
-        $isGlobalAdmin = $sender->hasRole(['Admin Instansi', 'Admin']);
+        $isGlobalAdmin = $sender->can('disposisi.kelola');
 
         if (! $isRecipientUser && ! $isGlobalAdmin) {
             throw new AuthorizationException('Hanya penerima sah dari lembar disposisi ini yang dapat meneruskannya ke bawahan.');
@@ -105,7 +105,7 @@ class ForwardDisposisiAction
 
         // 4. Batasi cakupan hierarki unit (hanya bawahan dalam cakupan unit kerja pengirim)
         $allowedUnitIds = null;
-        $isTopLeadership = $sender->hasRole(['Admin Instansi', 'Admin', 'Pimpinan']) 
+        $isTopLeadership = $sender->can('disposisi.kelola')
             || ($sender->position && $sender->position->level === 1);
 
         if (! $isTopLeadership && $sender->position && $sender->position->orgUnit) {
