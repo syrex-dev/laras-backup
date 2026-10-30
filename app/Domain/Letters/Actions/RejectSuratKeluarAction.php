@@ -2,24 +2,23 @@
 
 namespace App\Domain\Letters\Actions;
 
-use App\Domain\Letters\Support\SuratKeluarStatus;
-use App\Models\SuratKeluar;
-use App\Traits\Loggable;
+use App\Domain\SuratKeluar\Actions\RejectSuratKeluarAction as CanonicalRejectAction;
+use App\Domain\SuratKeluar\Models\SuratKeluar;
+use App\Models\User;
 
+/**
+ * Adapter / Alias untuk kompatibilitas pemanggilan prototipe lama.
+ * Seluruh logika kanonik dipusatkan pada App\Domain\SuratKeluar\Actions\RejectSuratKeluarAction.
+ */
 class RejectSuratKeluarAction
 {
-    use Loggable;
+    public function __construct(
+        protected CanonicalRejectAction $canonicalAction
+    ) {}
 
-    public function execute(SuratKeluar $suratKeluar): bool
+    public function execute(SuratKeluar $suratKeluar, int $rejectorId, ?string $alasan = null): SuratKeluar
     {
-        $updated = $suratKeluar->update([
-            'status_approval' => SuratKeluarStatus::REJECTED,
-        ]);
-
-        if ($updated) {
-            $this->logActivity('rejected', 'surat_keluar', $suratKeluar->id);
-        }
-
-        return $updated;
+        $rejector = User::find($rejectorId);
+        return $this->canonicalAction->execute($rejector, $suratKeluar, $alasan ?? 'Ditolak via legacy adapter');
     }
 }

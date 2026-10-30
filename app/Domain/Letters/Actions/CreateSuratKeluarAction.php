@@ -2,39 +2,23 @@
 
 namespace App\Domain\Letters\Actions;
 
-use App\Domain\Letters\Services\NomorSuratGenerator;
-use App\Domain\Letters\Support\SuratKeluarStatus;
-use App\Models\SuratKeluar;
-use App\Traits\Loggable;
+use App\Domain\SuratKeluar\Actions\SaveDraftSuratKeluarAction as CanonicalSaveDraftAction;
+use App\Domain\SuratKeluar\Models\SuratKeluar;
+use App\Models\User;
 
+/**
+ * Adapter / Alias untuk kompatibilitas pemanggilan prototipe lama.
+ * Seluruh logika kanonik dipusatkan pada App\Domain\SuratKeluar\Actions\SaveDraftSuratKeluarAction.
+ */
 class CreateSuratKeluarAction
 {
-    use Loggable;
-
     public function __construct(
-        protected NomorSuratGenerator $nomorSuratGenerator
+        protected CanonicalSaveDraftAction $canonicalAction
     ) {}
 
     public function execute(array $data, int $userId): SuratKeluar
     {
-        $surat = SuratKeluar::create([
-            'klasifikasi_id' => $data['klasifikasi_id'],
-            'penyetuju_id' => $data['penyetuju_id'],
-            'tanggal_surat' => $data['tanggal_surat'],
-            'tujuan' => $data['tujuan'],
-            'perihal' => $data['perihal'],
-            'lampiran' => $data['lampiran'] ?? null,
-            'isi' => $data['isi'] ?? null,
-            'status_approval' => SuratKeluarStatus::DRAFT,
-            'user_id' => $userId,
-            'templat_surat_id' => $data['templat_surat_id'],
-        ]);
-
-        $nomorSurat = $this->nomorSuratGenerator->generate($surat);
-        $surat->update(['nomor_surat' => $nomorSurat]);
-
-        $this->logActivity('created', 'surat_keluar', $surat->id);
-
-        return $surat;
+        $user = User::find($userId);
+        return $this->canonicalAction->execute($user, $data);
     }
 }

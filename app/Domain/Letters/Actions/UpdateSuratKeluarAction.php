@@ -2,21 +2,23 @@
 
 namespace App\Domain\Letters\Actions;
 
-use App\Models\SuratKeluar;
+use App\Domain\SuratKeluar\Actions\SaveDraftSuratKeluarAction as CanonicalSaveDraftAction;
+use App\Domain\SuratKeluar\Models\SuratKeluar;
+use App\Models\User;
 
+/**
+ * Adapter / Alias untuk kompatibilitas pemanggilan prototipe lama.
+ * Seluruh logika kanonik dipusatkan pada App\Domain\SuratKeluar\Actions\SaveDraftSuratKeluarAction.
+ */
 class UpdateSuratKeluarAction
 {
-    public function execute(SuratKeluar $suratKeluar, array $data): bool
+    public function __construct(
+        protected CanonicalSaveDraftAction $canonicalAction
+    ) {}
+
+    public function execute(SuratKeluar $suratKeluar, array $data, ?int $userId = null): SuratKeluar
     {
-        return $suratKeluar->update([
-            'klasifikasi_id' => $data['klasifikasi_id'],
-            'penyetuju_id' => $data['penyetuju_id'],
-            'tanggal_surat' => $data['tanggal_surat'],
-            'tujuan' => $data['tujuan'],
-            'perihal' => $data['perihal'],
-            'lampiran' => $data['lampiran'] ?? null,
-            'isi' => $data['isi'] ?? null,
-            'templat_surat_id' => $data['templat_surat_id'],
-        ]);
+        $user = $userId ? User::find($userId) : ($suratKeluar->pembuat ?? User::find($suratKeluar->user_id));
+        return $this->canonicalAction->execute($user, $data, $suratKeluar);
     }
 }
