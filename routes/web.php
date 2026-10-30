@@ -108,12 +108,17 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/surat-keluar/{suratKeluar}/draft-pdf', [SuratKeluarController::class, 'previewDraft'])->name('surat-keluar.draft-pdf');
     Route::resource('surat-keluar', SuratKeluarController::class)->only(['index', 'show']);
 
-    // Disposisi (buat hanya Pimpinan, lihat untuk semua login)
-    Route::middleware(['role:Pimpinan'])->group(function () {
-        Route::get('/disposisi/create', [DisposisiController::class, 'create'])->name('disposisi.create');
-        Route::post('/disposisi', [DisposisiController::class, 'store'])->name('disposisi.store');
-    });
-    Route::resource('disposisi', DisposisiController::class)->only(['index', 'show']);
+    // Disposisi Modern (Fase 2: Kotak Masuk, Penerusan Berjenjang, Tindak Lanjut, Unduh Bukti)
+    Route::get('/disposisi', [\App\Http\Controllers\Disposisi\DisposisiController::class, 'index'])->name('disposisi.index');
+    Route::post('/disposisi', [\App\Http\Controllers\Disposisi\DisposisiController::class, 'store'])->name('disposisi.store');
+    Route::get('/disposisi/recipient/{recipient}', [\App\Http\Controllers\Disposisi\DisposisiController::class, 'show'])->name('disposisi.recipient.show');
+    Route::post('/disposisi/recipient/{recipient}/forward', [\App\Http\Controllers\Disposisi\DisposisiController::class, 'forward'])->name('disposisi.recipient.forward');
+    Route::post('/disposisi/recipient/{recipient}/followup', [\App\Http\Controllers\Disposisi\DisposisiController::class, 'followup'])->name('disposisi.recipient.followup');
+    Route::get('/disposisi/attachments/{attachment}/download', [\App\Http\Controllers\Disposisi\DisposisiController::class, 'downloadAttachment'])->name('disposisi.attachment.download');
+
+    // Legacy Disposisi Routes (Kompatibilitas Prototipe & Test Lama)
+    Route::get('/disposisi/create', [DisposisiController::class, 'create'])->name('disposisi.create');
+    Route::get('/disposisi/{disposisi}', [DisposisiController::class, 'show'])->name('disposisi.show');
     Route::patch('/disposisi/{disposisi}/status', [DisposisiController::class, 'updateStatus'])->name('disposisi.update-status');
 
     // Pengaturan & Master Organisasi (Admin Instansi & Admin)

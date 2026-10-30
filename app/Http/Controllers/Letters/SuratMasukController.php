@@ -130,14 +130,29 @@ class SuratMasukController extends Controller
             ->latest('id')
             ->get();
 
-        if ($request->header('X-Inertia')) {
-            return Inertia::render('SuratMasuk/Show', [
-                'surat' => $suratMasuk,
-                'auditLogs' => $auditLogs,
-            ]);
+        // Ambil rantai pohon disposisi berjenjang
+        $disposisiChain = \App\Domain\Disposisi\Models\Disposisi::with([
+            'pemberi',
+            'pemberiPosition',
+            'recipients.recipientUser',
+            'recipients.recipientPosition',
+            'recipients.delegatedUser',
+            'recipients.followups.attachments',
+            'recipients.followups.user',
+        ])
+        ->where('surat_masuk_id', $suratMasuk->id)
+        ->orderBy('created_at', 'asc')
+        ->get();
+
+        if ($request->has('legacy_view')) {
+            return view('letters.surat-masuk.show', compact('suratMasuk'));
         }
 
-        return view('letters.surat-masuk.show', compact('suratMasuk'));
+        return Inertia::render('SuratMasuk/Show', [
+            'surat' => $suratMasuk,
+            'auditLogs' => $auditLogs,
+            'disposisiChain' => $disposisiChain,
+        ]);
     }
 
     /**

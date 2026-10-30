@@ -56,9 +56,10 @@ interface SuratMasukDetail {
 interface ShowProps {
     surat: SuratMasukDetail;
     auditLogs: AuditLogItem[];
+    disposisiChain?: any[];
 }
 
-export default function Show({ surat, auditLogs }: ShowProps) {
+export default function Show({ surat, auditLogs, disposisiChain = [] }: ShowProps) {
     const { term } = useTerminology();
     const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
     const [previewAttachment, setPreviewAttachment] = useState<AttachmentItem | null>(null);
@@ -298,6 +299,61 @@ export default function Show({ surat, auditLogs }: ShowProps) {
                                                         Unduh
                                                     </Button>
                                                 </a>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </Card>
+
+                        {/* Lini Masa Rantai Disposisi Berjenjang */}
+                        <Card title="Lini Masa Rantai Disposisi Berjenjang">
+                            {disposisiChain.length === 0 ? (
+                                <p className="text-xs text-slate-500 py-4 text-center">
+                                    Belum ada disposisi untuk naskah surat ini.
+                                </p>
+                            ) : (
+                                <div className="space-y-4">
+                                    {disposisiChain.map((disp, idx) => (
+                                        <div key={disp.id} className="p-3.5 bg-slate-50 rounded-lg border border-slate-200 text-xs space-y-2">
+                                            <div className="flex justify-between items-start">
+                                                <div>
+                                                    <span className="font-bold text-slate-900">
+                                                        Tingkat {idx + 1}: {disp.pemberi?.name}
+                                                    </span>
+                                                    <span className="text-[11px] text-slate-500 block">
+                                                        {disp.pemberi_position?.name || 'Pemberi Disposisi'}
+                                                    </span>
+                                                </div>
+                                                <Badge variant="info">
+                                                    {disp.prioritas}
+                                                </Badge>
+                                            </div>
+                                            <p className="text-slate-800 font-medium">
+                                                "{disp.instruksi}"
+                                            </p>
+                                            {disp.catatan && (
+                                                <p className="text-slate-500 italic">
+                                                    Catatan: {disp.catatan}
+                                                </p>
+                                            )}
+
+                                            <div className="pt-2 border-t border-slate-200 space-y-1">
+                                                <span className="font-semibold text-slate-600 block text-[11px]">
+                                                    Penerima ({disp.recipients?.length}):
+                                                </span>
+                                                {disp.recipients?.map((rec: any) => (
+                                                    <div key={rec.id} className="flex justify-between items-center p-1.5 bg-white rounded border border-slate-100">
+                                                        <span>
+                                                            {rec.is_delegated
+                                                                ? `${rec.delegated_user?.name || 'Plt'} (Plt. ${rec.recipient_position?.name})`
+                                                                : rec.recipient_user?.name || rec.recipient_position?.name}
+                                                        </span>
+                                                        <Badge variant={rec.status === 'selesai' ? 'success' : 'default'}>
+                                                            {rec.status}
+                                                        </Badge>
+                                                    </div>
+                                                ))}
                                             </div>
                                         </div>
                                     ))}
