@@ -393,3 +393,28 @@ CREATE INDEX idx_disposisi_recipient_user_status ON disposisi_recipients (recipi
 -- Delegasi wewenang aktif
 CREATE INDEX idx_delegations_active ON position_delegations (position_id, start_date, end_date) WHERE is_active = TRUE;
 ```
+
+---
+
+## 7. Verifikasi Siklus Migrasi Fase 3A (Reversibilitas & Konsistensi Skema)
+
+Pada penutupan Fase 3A (butir 3.2), seluruh migrasi Fase 3A telah diuji siklus hidupnya (*lifecycle reversibility*) pada dua mesin basis data: PostgreSQL port 5433 (`laras` & `laras_test`) dan SQLite (`database.sqlite` & `:memory:`).
+
+### 7.1 Inventaris Migrasi Fase 3A & Riwayat Commit
+
+| Berkas Migrasi | Commit Perdana | Status Pengeditan Lanjutan | Deskripsi & Ruang Lingkup Skema |
+| :--- | :--- | :--- | :--- |
+| `2026_10_30_000004_create_fase_3a_surat_keluar_tables.php` | `83e227b` | **Diedit 1x** di commit `3175bb9` | Menambahkan tabel `numbering_sequences`, `surat_keluar_approvals`, `surat_keluar_versions`, serta menyempurnakan kolom penomoran token atomik (`current_number`, `format_pattern`, `reset_frequency`). |
+| `2026_10_30_000005_add_surat_keluar_scale_indexes.php` | `7ca40dc` | **Tidak Pernah Diedit** | Indeks skala komposit (`status+id`, `status+sifat+id`, `org_unit+status+id`) dan indeks trigram GIN untuk pencarian teks perihal/tujuan. Dilengkapi klausul guard `DB::getDriverName() === 'pgsql'` agar aman dijalankan pada SQLite. |
+
+### 7.2 Hasil Pengujian Reversibilitas (Rollback & Re-Migrate)
+
+1. **PostgreSQL port 5433 (`laras_test`):**
+   * `migrate:fresh`: Sukses mengeksekusi 28 berkas migrasi dalam ~1.8 detik.
+   * `migrate:rollback --step=2`: Sukses menggugurkan migrasi skala `000005` (112.82ms) dan `000004` (36.91ms) tanpa sisa tabel yatim atau foreign key violation.
+   * `migrate`: Sukses mengaplikasikan kembali migrasi `000004` (285.89ms) dan `000005` (34.38ms) dengan hasil skema 100% identik.
+2. **SQLite (`database.sqlite`):**
+   * `migrate:fresh`: Sukses mengeksekusi seluruh migrasi dalam ~35 detik.
+   * `migrate:rollback --step=2`: Sukses menggugurkan migrasi `000004` dan `000003` tanpa kesalahan sintaks.
+   * `migrate`: Sukses re-migrate hingga migrasi `000005` secara konsisten.
+
