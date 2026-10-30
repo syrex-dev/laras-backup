@@ -27,9 +27,9 @@ class DisposisiController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
-        if ($user->hasRole('Admin')) {
+        if ($user->can('disposisi.kelola')) {
             $disposisi = $query->paginate(10);
-        } elseif ($user->hasRole('Pimpinan')) {
+        } elseif ($user->can('disposisi.buat')) {
             $disposisi = $query->where('pengirim_id', $user->id)->paginate(10);
         } else {
             $disposisi = $query->where('penerima_id', $user->id)->paginate(10);
@@ -80,14 +80,14 @@ class DisposisiController extends Controller
         $penerimaId = (int) $disposisi->penerima_id;
         $pengirimId = (int) $disposisi->pengirim_id;
 
-        $isAdmin = $user->hasRole('Admin');
-        $isPimpinan = $user->hasRole('Pimpinan');
+        $isAdmin = $user->can('disposisi.kelola');
+        $canCreate = $user->can('disposisi.buat');
 
-        if (! $isAdmin && ! $isPimpinan && $currentUserId !== $penerimaId) {
+        if (! $isAdmin && ! $canCreate && $currentUserId !== $penerimaId) {
             abort(403, 'Unauthorized');
         }
 
-        if ($isPimpinan && $currentUserId !== $pengirimId) {
+        if ($canCreate && ! $isAdmin && $currentUserId !== $pengirimId) {
             abort(403, 'Unauthorized');
         }
 

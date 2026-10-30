@@ -236,7 +236,7 @@ class DisposisiController extends Controller
         $effectiveUser = $recipient->effectiveUser();
         $isRecipient = $effectiveUser && $effectiveUser->id === $user->id;
         $isSender = $recipient->disposisi->pemberi_id === $user->id;
-        $isAdmin = $user->hasRole(['Admin Instansi', 'Admin']);
+        $isAdmin = $user->can('disposisi.kelola');
 
         // Tandai dibaca jika pertama kali dibuka oleh penerima
         if ($isRecipient && $recipient->status === DisposisiRecipient::STATUS_BELUM_DIBACA) {

@@ -52,7 +52,7 @@ class InstitutionProfileController extends Controller
         AuditLogger::log(
             action: 'institution_profile.updated',
             subject: $profile,
-            description: 'Profil instansi dan kamus istilah diperbarui oleh '.($request->user()?->name ?? 'Admin'),
+            description: 'Profil instansi dan kamus istilah diperbarui oleh '.($request->user()?->name ?? 'Pengguna'),
             properties: [
                 'old' => $oldData,
                 'new' => $profile->toArray(),

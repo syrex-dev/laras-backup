@@ -22,7 +22,7 @@ class LoginController extends Controller
             $props['demoAccounts'] = [
                 'password' => 'password',
                 'accounts' => [
-                    ['role' => 'Admin', 'email' => 'admin@contoh.ac.id'],
+                    ['role' => 'Admin Instansi', 'email' => 'admin@contoh.ac.id'],
                     ['role' => 'Direktur', 'email' => 'direktur@contoh.ac.id'],
                     ['role' => 'Staf TU', 'email' => 'tu@contoh.ac.id'],
                 ],
