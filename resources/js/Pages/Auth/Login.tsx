@@ -6,7 +6,11 @@ import { Button } from '@/Components/Button';
 import { PageProps } from '@/types';
 import { LogIn } from 'lucide-react';
 
-export default function Login() {
+interface LoginProps {
+    showDemoAccounts?: boolean;
+}
+
+export default function Login({ showDemoAccounts = false }: LoginProps) {
     const { props } = usePage<PageProps>();
     const { institution } = props;
 
@@ -80,12 +84,14 @@ export default function Login() {
                 </div>
 
                 {/* Info Bantuan Demo */}
-                <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-100 text-[11px] text-slate-500 space-y-1">
-                    <p className="font-semibold text-slate-700">Akun Percontohan Demo (Password: password):</p>
-                    <p>• Admin: <span className="font-mono text-slate-700">admin@contoh.ac.id</span></p>
-                    <p>• Direktur: <span className="font-mono text-slate-700">direktur@contoh.ac.id</span></p>
-                    <p>• Staf TU: <span className="font-mono text-slate-700">tu@contoh.ac.id</span></p>
-                </div>
+                {showDemoAccounts && (
+                    <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-100 text-[11px] text-slate-500 space-y-1">
+                        <p className="font-semibold text-slate-700">Akun Percontohan Demo (Password: password):</p>
+                        <p>• Admin: <span className="font-mono text-slate-700">admin@contoh.ac.id</span></p>
+                        <p>• Direktur: <span className="font-mono text-slate-700">direktur@contoh.ac.id</span></p>
+                        <p>• Staf TU: <span className="font-mono text-slate-700">tu@contoh.ac.id</span></p>
+                    </div>
+                )}
             </form>
         </GuestLayout>
     );

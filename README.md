@@ -92,6 +92,41 @@ Semua akun demo di bawah ini menggunakan kata sandi standar: `password`
 
 ---
 
+## 🛠️ Pengembangan Lokal & Deploy
+
+### 1. Mode Pengembangan Lokal (Hot Module Replacement)
+Saat sedang aktif mengembangkan fitur baru atau memodifikasi antarmuka frontend (React/TypeScript):
+```bash
+npm run dev
+```
+Perintah ini menyalakan server Vite HMR dan secara otomatis membuat penanda `public/hot`.
+
+### 2. Build Produksi & Deploy
+Sebelum melakukan rilis/deploy ke server produksi atau setelah memperbarui kode aplikasi tanpa menjalankan dev server:
+```bash
+npm run build
+```
+> [!IMPORTANT]
+> `npm run build` wajib dijalankan sebelum deploy atau rilis agar seluruh komponen React terbaru terkompilasi ke dalam folder `public/build/` dengan manifest yang valid. Folder `public/build` dan `public/hot` sudah dikecualikan di `.gitignore` sehingga tidak perlu di-push ke remote repository.
+
+### 3. Pemecahan Masalah: Mengatasi Layar Putih (Blank Screen)
+Jika halaman browser (misalnya `/login` atau halaman lainnya) menampilkan layar putih kosong (*blank screen*), hal tersebut biasanya disebabkan oleh:
+1. **File `public/hot` tertinggal**:
+   Jika server `npm run dev` dihentikan secara paksa, file `public/hot` terkadang masih tertinggal di folder `public/`. Laravel akan terus mencoba memuat aset dari server dev Vite lokal yang sudah mati.
+   **Solusi**: Hapus file `public/hot` jika dev server tidak aktif:
+   - Linux/macOS: `rm -f public/hot`
+   - Windows PowerShell: `Remove-Item public/hot -Force -ErrorAction SilentlyContinue`
+2. **Aset `public/build` kedaluwarsa atau belum dikompilasi**:
+   Halaman yang baru ditambahkan belum terdaftar di `public/build/manifest.json`.
+   **Solusi**: Jalankan kompilasi ulang aset produksi:
+   ```bash
+   npm run build
+   ```
+3. **Cache browser lokal**:
+   Lakukan *hard refresh* di browser dengan menekan **`Ctrl + Shift + R`** atau **`Ctrl + F5`** (atau `Cmd + Shift + R` di macOS).
+
+---
+
 ## 🛡️ Keamanan & Kepatuhan
 1. **Audit Log Append-Only**: Tabel `activity_logs` dilindungi trigger level database (`BEFORE UPDATE OR DELETE`) yang menolak segala bentuk modifikasi atau manipulasi riwayat jejak audit secara langsung via SQL.
 2. **Entitlement Lisensi & Mode Baca-Saja**: Jika masa lisensi berakhir, sistem otomatis beralih ke mode baca-saja (*read-only*), memblokir mutasi baru sementara tetap mengizinkan login, logout, pencarian, dan ekspor data secara penuh.

@@ -17,7 +17,12 @@ class LoginController extends Controller
             return redirect()->route('dashboard');
         }
 
-        return Inertia::render('Auth/Login');
+        $props = [];
+        if (app()->environment(['local', 'testing'])) {
+            $props['showDemoAccounts'] = true;
+        }
+
+        return Inertia::render('Auth/Login', $props);
     }
 
     public function login(LoginRequest $request)
