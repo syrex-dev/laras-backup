@@ -71,7 +71,7 @@ Route::middleware(['auth'])->group(function () {
             ->take(5)
             ->get();
 
-        $recentSuratKeluar = SuratKeluar::with(['klasifikasi', 'creator'])
+        $recentSuratKeluar = SuratKeluar::with(['klasifikasi', 'pembuat'])
             ->latest()
             ->take(5)
             ->get();

@@ -56,6 +56,19 @@ class InertiaUiAndAssetIntegrityTest extends TestCase
      */
     public function test_dashboard_renders_via_inertia_with_live_statistics_and_volume_chart(): void
     {
+        $klasifikasi = \App\Models\KlasifikasiSurat::firstOrCreate(['kode_klasifikasi' => 'UM'], ['nama' => 'Umum']);
+        \App\Models\SuratKeluar::create([
+            'nomor_surat' => 'SK-DASH-001',
+            'klasifikasi_id' => $klasifikasi->id,
+            'user_id' => $this->adminUser->id,
+            'tujuan' => 'Mitra Kampus',
+            'perihal' => 'Pengujian Dashboard',
+            'isi' => 'Konten pengujian relasi recent surat keluar',
+            'status_approval' => 'draft',
+            'status' => 'draf',
+            'tanggal_surat' => now(),
+        ]);
+
         $response = $this->actingAs($this->adminUser)->get('/dashboard');
 
         $response->assertOk();

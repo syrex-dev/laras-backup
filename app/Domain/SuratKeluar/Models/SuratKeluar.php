@@ -98,6 +98,11 @@ class SuratKeluar extends Model
         return $this->pembuat();
     }
 
+    public function creator(): BelongsTo
+    {
+        return $this->pembuat();
+    }
+
     public function penandatangan(): BelongsTo
     {
         return $this->belongsTo(User::class, 'penandatangan_id');
