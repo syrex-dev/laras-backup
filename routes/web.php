@@ -56,9 +56,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Dashboard
     Route::get('/dashboard', function (Request $request) {
-        if ($request->header('X-Inertia')) {
-            return Inertia::location(route('dashboard'));
-        }
+        $user = $request->user();
 
         $stats = [
             'surat_masuk' => SuratMasuk::count(),
@@ -67,7 +65,30 @@ Route::middleware(['auth'])->group(function () {
             'klasifikasi' => KlasifikasiSurat::count(),
         ];
 
-        return view('dashboard', compact('stats'));
+        $recentSuratMasuk = SuratMasuk::with('klasifikasi')
+            ->latest('tanggal_diterima')
+            ->latest('id')
+            ->take(5)
+            ->get();
+
+        $recentSuratKeluar = SuratKeluar::with(['klasifikasi', 'creator'])
+            ->latest()
+            ->take(5)
+            ->get();
+
+        $pendingDisposisi = Disposisi::with(['suratMasuk'])
+            ->where('penerima_id', $user?->id)
+            ->whereIn('status', ['belum_dibaca', 'terbaca'])
+            ->latest()
+            ->take(5)
+            ->get();
+
+        return Inertia::render('Dashboard', [
+            'stats' => $stats,
+            'recentSuratMasuk' => $recentSuratMasuk,
+            'recentSuratKeluar' => $recentSuratKeluar,
+            'pendingDisposisi' => $pendingDisposisi,
+        ]);
     })->name('dashboard');
 
     // Klasifikasi Surat (CRUD) - Petugas Arsip & Admin Instansi

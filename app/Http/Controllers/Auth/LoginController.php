@@ -47,10 +47,6 @@ class LoginController extends Controller
                 causer: $user
             );
 
-            if ($request->header('X-Inertia')) {
-                return Inertia::location(session()->pull('url.intended', route('dashboard')));
-            }
-
             return redirect()->intended(route('dashboard'));
         }
 
