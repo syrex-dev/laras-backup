@@ -83,7 +83,7 @@ export default function RecycleBin({ trashedItems = [] }: RecycleBinProps) {
                                 </TableRow>
                             ) : (
                                 trashedItems.map((item) => (
-                                    <TableRow key={`${item.type}-${item.id}`} hover>
+                                    <TableRow key={`${item.type}-${item.id}`}>
                                         <TableCell>
                                             <Badge variant={item.type === 'surat-masuk' ? 'primary' : 'info'}>
                                                 {item.display_type || item.type}

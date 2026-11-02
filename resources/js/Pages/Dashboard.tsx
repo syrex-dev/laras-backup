@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import { AppLayout } from '@/Layouts/AppLayout';
 import { Card } from '@/Components/Card';
@@ -15,13 +15,46 @@ import {
     FileText,
     ChevronRight,
     Sparkles,
+    BarChart3,
+    TrendingUp,
 } from 'lucide-react';
+import {
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    BarElement,
+    Title,
+    Tooltip,
+    Legend,
+    Filler,
+} from 'chart.js';
+import { Line, Bar } from 'react-chartjs-2';
+
+ChartJS.register(
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    BarElement,
+    Title,
+    Tooltip,
+    Legend,
+    Filler
+);
 
 interface DashboardStats {
     surat_masuk: number;
     surat_keluar: number;
     disposisi: number;
     klasifikasi: number;
+}
+
+interface MonthlyVolumeData {
+    labels: string[];
+    surat_masuk: number[];
+    surat_keluar: number[];
 }
 
 interface LetterItem {
@@ -62,6 +95,7 @@ interface DashboardProps {
     recentSuratMasuk: LetterItem[];
     recentSuratKeluar: LetterItem[];
     pendingDisposisi: DisposisiItem[];
+    monthlyVolume?: MonthlyVolumeData;
 }
 
 export default function Dashboard({
@@ -69,7 +103,10 @@ export default function Dashboard({
     recentSuratMasuk = [],
     recentSuratKeluar = [],
     pendingDisposisi = [],
+    monthlyVolume = { labels: [], surat_masuk: [], surat_keluar: [] },
 }: DashboardProps) {
+    const [chartType, setChartType] = useState<'line' | 'bar'>('line');
+
     const statCards = [
         {
             title: 'Surat Masuk',
@@ -108,6 +145,75 @@ export default function Dashboard({
             badge: 'Katalog',
         },
     ];
+
+    const totalVolume =
+        (monthlyVolume?.surat_masuk?.reduce((a, b) => a + b, 0) || 0) +
+        (monthlyVolume?.surat_keluar?.reduce((a, b) => a + b, 0) || 0);
+
+    const chartData = {
+        labels: monthlyVolume.labels,
+        datasets: [
+            {
+                label: 'Surat Masuk',
+                data: monthlyVolume.surat_masuk,
+                borderColor: '#10b981',
+                backgroundColor: chartType === 'line' ? 'rgba(16, 185, 129, 0.12)' : '#10b981',
+                fill: chartType === 'line',
+                tension: 0.35,
+                borderRadius: chartType === 'bar' ? 6 : 0,
+            },
+            {
+                label: 'Surat Keluar',
+                data: monthlyVolume.surat_keluar,
+                borderColor: '#0284c7',
+                backgroundColor: chartType === 'line' ? 'rgba(2, 132, 199, 0.12)' : '#0284c7',
+                fill: chartType === 'line',
+                tension: 0.35,
+                borderRadius: chartType === 'bar' ? 6 : 0,
+            },
+        ],
+    };
+
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'top' as const,
+                labels: {
+                    boxWidth: 12,
+                    font: { size: 12, family: 'sans-serif' },
+                },
+            },
+            tooltip: {
+                backgroundColor: '#1e293b',
+                titleFont: { size: 12 },
+                bodyFont: { size: 12 },
+                padding: 10,
+                cornerRadius: 8,
+            },
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    precision: 0,
+                    font: { size: 11 },
+                },
+                grid: {
+                    color: '#f1f5f9',
+                },
+            },
+            x: {
+                ticks: {
+                    font: { size: 11 },
+                },
+                grid: {
+                    display: false,
+                },
+            },
+        },
+    };
 
     const formatStatusBadge = (status: string) => {
         switch (status) {
@@ -192,6 +298,61 @@ export default function Dashboard({
                         );
                     })}
                 </div>
+
+                {/* Volume Persuratan 6 Bulan Terakhir Chart Card */}
+                <Card
+                    title={
+                        <div className="flex items-center gap-2">
+                            <BarChart3 className="w-5 h-5 text-emerald-600" />
+                            <span>Volume Persuratan (6 Bulan Terakhir)</span>
+                        </div>
+                    }
+                    subtitle="Statistik aliran naskah masuk dan naskah dinas keluar yang diproses sistem"
+                    action={
+                        <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl">
+                            <button
+                                type="button"
+                                onClick={() => setChartType('line')}
+                                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                                    chartType === 'line'
+                                        ? 'bg-white text-emerald-700 shadow-xs'
+                                        : 'text-slate-500 hover:text-slate-800'
+                                }`}
+                            >
+                                Garis
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setChartType('bar')}
+                                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                                    chartType === 'bar'
+                                        ? 'bg-white text-emerald-700 shadow-xs'
+                                        : 'text-slate-500 hover:text-slate-800'
+                                }`}
+                            >
+                                Batang
+                            </button>
+                        </div>
+                    }
+                >
+                    {totalVolume === 0 && (
+                        <div className="mb-4 p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs text-slate-500">
+                            <div className="flex items-center gap-2">
+                                <TrendingUp className="w-4 h-4 text-emerald-600" />
+                                <span>Belum ada riwayat lalu lintas surat 6 bulan terakhir. Grafik akan otomatis terisi saat naskah dinas didaftarkan.</span>
+                            </div>
+                            <Badge variant="muted">Empty State</Badge>
+                        </div>
+                    )}
+
+                    <div className="h-72 w-full">
+                        {chartType === 'line' ? (
+                            <Line data={chartData} options={chartOptions} />
+                        ) : (
+                            <Bar data={chartData} options={chartOptions} />
+                        )}
+                    </div>
+                </Card>
 
                 {/* Main Content Grid: Recent Letters & Pending Dispositions */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

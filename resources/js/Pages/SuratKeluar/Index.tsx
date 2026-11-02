@@ -111,7 +111,7 @@ export default function Index({ suratKeluar, klasifikasiList, unitsList, filters
             case 'penting':
                 return <Badge variant="info">Penting</Badge>;
             default:
-                return <Badge variant="default">Biasa</Badge>;
+                return <Badge variant="muted">Biasa</Badge>;
         }
     };
 

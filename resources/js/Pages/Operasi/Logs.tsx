@@ -85,7 +85,7 @@ export default function Logs({ logs }: LogsProps) {
                                 </TableRow>
                             ) : (
                                 list.map((item) => (
-                                    <TableRow key={item.id} hover>
+                                    <TableRow key={item.id}>
                                         <TableCell className="whitespace-nowrap font-mono text-xs text-slate-500">
                                             <div className="flex items-center gap-1.5">
                                                 <Clock className="w-3.5 h-3.5 text-slate-400" />

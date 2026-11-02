@@ -133,7 +133,7 @@ export default function KlasifikasiSuratPage({ klasifikasi }: KlasifikasiProps) 
                                 </TableRow>
                             ) : (
                                 list.map((item) => (
-                                    <TableRow key={item.id} hover>
+                                    <TableRow key={item.id}>
                                         <TableCell className="font-mono text-xs font-bold text-emerald-700 bg-emerald-50/50 px-3 py-1 rounded">
                                             {item.kode_klasifikasi}
                                         </TableCell>

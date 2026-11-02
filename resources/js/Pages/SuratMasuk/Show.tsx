@@ -355,7 +355,7 @@ export default function Show({ surat, auditLogs, disposisiChain = [] }: ShowProp
                                                                 ? `${rec.delegated_user?.name || 'Plt'} (Plt. ${rec.recipient_position?.name})`
                                                                 : rec.recipient_user?.name || rec.recipient_position?.name}
                                                         </span>
-                                                        <Badge variant={rec.status === 'selesai' ? 'success' : 'default'}>
+                                                        <Badge variant={rec.status === 'selesai' ? 'success' : 'muted'}>
                                                             {rec.status}
                                                         </Badge>
                                                     </div>

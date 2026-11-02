@@ -83,11 +83,31 @@ Route::middleware(['auth'])->group(function () {
             ->take(5)
             ->get();
 
+        $monthlyVolume = [
+            'labels' => [],
+            'surat_masuk' => [],
+            'surat_keluar' => [],
+        ];
+
+        for ($i = 5; $i >= 0; $i--) {
+            $monthDate = now()->subMonths($i);
+            $monthlyVolume['labels'][] = $monthDate->translatedFormat('M Y');
+            $start = $monthDate->copy()->startOfMonth()->toDateString();
+            $end = $monthDate->copy()->endOfMonth()->toDateString();
+
+            $monthlyVolume['surat_masuk'][] = SuratMasuk::whereBetween('tanggal_diterima', [$start, $end])->count();
+            $monthlyVolume['surat_keluar'][] = SuratKeluar::whereBetween('created_at', [
+                $monthDate->copy()->startOfMonth(),
+                $monthDate->copy()->endOfMonth(),
+            ])->count();
+        }
+
         return Inertia::render('Dashboard', [
             'stats' => $stats,
             'recentSuratMasuk' => $recentSuratMasuk,
             'recentSuratKeluar' => $recentSuratKeluar,
             'pendingDisposisi' => $pendingDisposisi,
+            'monthlyVolume' => $monthlyVolume,
         ]);
     })->name('dashboard');
 

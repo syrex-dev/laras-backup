@@ -37,6 +37,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode; title?: string }> 
     };
 
     const userPermissions = auth.user?.permissions || [];
+    const userRoles = auth.user?.roles?.map((r) => r.name) || [];
     const hasPermission = (permission?: string | string[]) => {
         if (!permission) return true;
         if (Array.isArray(permission)) {
