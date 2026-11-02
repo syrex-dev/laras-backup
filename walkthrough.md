@@ -62,16 +62,16 @@
 
 ### BAGIAN 3 — UI: Satu Layout, Tanpa Layar Putih
 
-| Butir | Status | Commit | Catatan Audit |
+| Butir | Status | Commit | Catatan Audit & Implementasi |
 | :--- | :---: | :---: | :--- |
-| **3.1 Dashboard Inertia/React** | SEBAGIAN | - | `/dashboard` masih mengembalikan `view('dashboard')` Blade lama dengan `Inertia::location` redirect workaround. |
-| **3.2 Inventarisasi & Pembersihan Rute Blade** | SEBAGIAN | - | Rute prototipe lama (`operations.recycle-bin`, `operations.logs`, dll.) masih merujuk Blade. |
-| **3.3 Satu Sumber Menu (Filtered by Permission)** | SEBAGIAN | - | Telah diterapkan di `AppLayout.tsx`, perlu integrasi penuh dengan dashboard kanonikal. |
-| **3.4 Dashboard Statistik Nyata & Grafik Volume** | TIDAK DIKERJAKAN | - | Memerlukan pembuatan komponen React Chart di Inertia Dashboard. |
-| **3.5 Tag Lang, Meta notranslate, Judul Instansi** | TIDAK DIKERJAKAN | - | Diperlukan penyesuaian di `resources/views/app.blade.php`. |
-| **3.6 ErrorBoundary & Halaman Error Indonesia** | TIDAK DIKERJAKAN | - | Perlu pembuatan ErrorBoundary React dan penanganan 403/404/419/500. |
-| **3.7 Build Tanpa Jeda Aset & eoffice:doctor** | TIDAK DIKERJAKAN | - | Perlu penyesuaian `vite.config.js`, npm script `dev:clean`, dan command `eoffice:doctor`. |
-| **3.8 Pengujian UI Inertia & Manifest Asset** | TIDAK DIKERJAKAN | - | Test iterasi tautan menu Inertia dan verifikasi entri `@vite`. |
+| **3.1 Dashboard Inertia/React** | SELESAI | `ef2ec72` | Mengganti rute `/dashboard` ke Inertia/React menggunakan `AppLayout.tsx`, menghapus workaround `Inertia::location`. |
+| **3.2 Inventarisasi & Pembersihan Rute Blade** | SELESAI | `b22f2c0` | Menghapus `resources/views/layouts/app.blade.php`, `resources/js/app.js`, `dashboard.blade.php`, `welcome.blade.php`. Mengonversi semua rute pasca-login ke Inertia (`Operasi/Logs`, `Operasi/RecycleBin`, `Organisasi/TandaTangan`, `Kearsipan/KlasifikasiSurat`, `SuratMasuk/Edit`). |
+| **3.3 Satu Sumber Menu (Filtered by Permission)** | SELESAI | `0587881` | Navigasi tunggal di `AppLayout.tsx` disaring ketat berdasarkan permission Spatie pengguna aktif. |
+| **3.4 Dashboard Statistik Nyata & Grafik Volume** | SELESAI | `3588ba1` | Statistik hitungan langsung dari basis data persuratan dan grafik Chart.js volume 6 bulan terakhir dengan status kosong informatif. |
+| **3.5 Tag Lang, Meta notranslate, Judul Instansi** | SELESAI | `1077167` | `app.blade.php` dilengkapi `<meta name="google" content="notranslate">`, `<html lang="id">`, dynamic title dari `InstitutionProfile::current()?->name`. |
+| **3.6 ErrorBoundary & Halaman Error Indonesia** | SELESAI | `a1c01b8` | `ErrorBoundary.tsx` global di React root, halaman error Inertia berbahasa Indonesia (`Error.tsx` untuk 403, 404, 419, 500, 503), dan redirect 419 dengan pesan ramah. |
+| **3.7 Build Tanpa Jeda Aset & eoffice:doctor** | SELESAI | `7ab4bf0` | Zero-downtime asset swap (`emptyOutDir: false`, `manifest.json`), script `dev:clean`, dan artisan command `php artisan eoffice:doctor`. |
+| **3.8 Pengujian UI Inertia & Manifest Asset** | SELESAI | `efd39a6`, `7e3af3f` | Suite pengujian `InertiaUiAndAssetIntegrityTest` menguji rute navigasi, manifest hash, file fisik, dan harmonisasi test view ke Inertia. |
 
 ---
 
@@ -134,8 +134,8 @@
 
 ### SQLite In-Memory (`php artisan test`):
 ```text
-Tests:    3 skipped, 153 passed (898 assertions)
-Duration: 38.69s
+Tests:    3 skipped, 157 passed (1029 assertions)
+Duration: 36.77s
 Status:   LULUS
 ```
 *Daftar test yang dilewati beserta alasannya:*
@@ -145,9 +145,9 @@ Status:   LULUS
 
 ### PostgreSQL port 5433 (`php artisan test -c phpunit.pgsql.xml`):
 ```text
-Tests:    156 passed (902 assertions)
-Duration: 95.23s
-Status:   100% LULUS (Semua 156 test dieksekusi tanpa ada yang di-skip)
+Tests:    160 passed (1033 assertions)
+Duration: 83.85s
+Status:   100% LULUS (Semua 160 test dieksekusi tanpa ada yang di-skip)
 ```
 
 ---
