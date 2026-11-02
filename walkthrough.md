@@ -80,11 +80,11 @@
 | Butir | Status | Commit | File Utama yang Berubah / Terlibat |
 | :--- | :---: | :---: | :--- |
 | **4.1 Benchmark 100k Data & EXPLAIN BUFFERS** | SELESAI | `8c93175` | `app/Console/Commands/BenchmarkFase3aPenutupanCommand.php` |
-| **4.2 Siklus Migrasi & Reversibilitas Skema** | SELESAI | `64e9d17` | `docs/DATABASE.md` (Bagian 7) |
+| **4.2 Siklus Migrasi & Reversibilitas Skema** | SELESAI | `470d1c6` | `docs/DATABASE.md` (Bagian 7.2), `database/migrations/*`, `database/seeders/SuratDemoSeeder.php` |
 | **4.3 Locale Default Indonesia & Validasi** | SELESAI | `5361bc6` | `.env.example`, `config/app.php`, `lang/id/*`, `tests/Feature/IndonesianValidationMessagesTest.php` |
 | **4.4 Harmonisasi Dualitas Surat Keluar** | SELESAI | `8b9d843`, `2f0074d`, `093da12` | `app/Domain/Letters/Actions/*`, `tests/Feature/PrototypeAndCanonicalCoexistenceTest.php`, `SaveDraftSuratKeluarAction.php` |
-| **4.5 Keputusan Tahun Nomor Surat** | SELESAI | `3175bb9` | `docs/OPEN_QUESTIONS.md` (OQ-08), `tests/Feature/SuratKeluarNumberingTest.php` |
-| **4.6 Log Commit & Eksekusi Full Suite** | SELESAI | - | Tercantum di Bagian 4 & Bagian 5 laporan ini. |
+| **4.5 Keputusan Tahun Nomor Surat** | SELESAI | `33e06cd` | `docs/OPEN_QUESTIONS.md` (OQ-14), `tests/Feature/SuratKeluarNumberingTest.php` |
+| **4.6 Log Commit & Eksekusi Full Suite** | SELESAI | `7e3af3f`, `470d1c6` | 160 test passed (1033 assertions) di PostgreSQL 5433, 157 passed di SQLite. |
 
 ---
 
@@ -135,7 +135,7 @@
 ### SQLite In-Memory (`php artisan test`):
 ```text
 Tests:    3 skipped, 157 passed (1029 assertions)
-Duration: 36.77s
+Duration: 44.11s
 Status:   LULUS
 ```
 *Daftar test yang dilewati beserta alasannya:*
@@ -146,7 +146,7 @@ Status:   LULUS
 ### PostgreSQL port 5433 (`php artisan test -c phpunit.pgsql.xml`):
 ```text
 Tests:    160 passed (1033 assertions)
-Duration: 83.85s
+Duration: 79.46s
 Status:   100% LULUS (Semua 160 test dieksekusi tanpa ada yang di-skip)
 ```
 
@@ -158,10 +158,10 @@ Perintah eksekusi: `php artisan eoffice:benchmark-3a`
 
 | Skenario Pengujian | Target SLA | Hasil Pengukuran Nyata | Evaluasi |
 | :--- | :---: | :---: | :---: |
-| **Daftar Surat Masuk** (filter `status=terdaftar & sifat=biasa`) | < 2.000 ms | **18.42 ms** | SANGAT CEPAT (< 500 ms) |
-| **Kotak Masuk Disposisi** (pengguna terpadat 100k baris) | < 2.000 ms | **35.10 ms** | SANGAT CEPAT (< 500 ms) |
-| **Daftar Surat Keluar** (filter `status=disetujui & sifat=biasa`) | < 2.000 ms | **24.85 ms** | SANGAT CEPAT (< 500 ms) |
-| **Optimasi Indeks Gabungan** (`idx_disp_rec_user_status_id`) | - | Dari Seq Scan ke **Bitmap Index Scan** | **38.4x Lebih Cepat** |
+| **Daftar Surat Masuk** (filter `status=terdaftar & sifat=biasa`) | < 2.000 ms | **1243.04 ms** | MEMENUHI TARGET (< 2s) |
+| **Kotak Masuk Disposisi** (pengguna terpadat 100k baris) | < 2.000 ms | **571.03 ms** | MEMENUHI TARGET (< 2s) |
+| **Daftar Surat Keluar** (filter `status=disetujui & sifat=biasa`) | < 2.000 ms | **649.15 ms** | MEMENUHI TARGET (< 2s) |
+| **Optimasi Indeks Gabungan** (`idx_disp_rec_user_status_id`) | - | Execution Time: **0.055 ms** (Covering) | Optimasi Akses Baris Terarah |
 
 ---
 
@@ -179,20 +179,21 @@ Perintah eksekusi: `php artisan eoffice:benchmark-3a`
 ---
 
 ## 7. Keputusan Teknis & Asumsi
-1. **Penomoran Berbasis Tanggal Naskah (OQ-08)**:
-   - Token `{bulan_romawi}` dan `{tahun}` pada penomoran surat keluar merujuk pada `tanggal_surat` efektif naskah (bukan waktu klik tombol approval). Hal ini memastikan konsistensi penomoran untuk naskah akhir tahun yang disetujui pada awal tahun berikutnya.
+1. **Penomoran Berbasis Tanggal Naskah & Reset Tahunan (OQ-08 & OQ-14)**:
+   - Nomor surat resmi selalu reset per 1 Januari tahun kalender baru per unit/pola format.
+   - Format penomoran mengacu pada tahun persetujuan naskah dinas resmi.
 2. **Kemandirian Role Spatie**:
    - Kolom legacy `role` pada tabel `users` dideprekasi demi kepatuhan arsitektur RBAC multi-unit dan multi-jabatan.
 
 ---
 
-## 8. Hal yang Belum Selesai (Rencana Bagian 3)
-1. **Migrasi Penuh Dashboard ke Inertia/React**:
-   - Mengganti rute `/dashboard` agar merender komponen Inertia `Dashboard/Index.tsx` dengan `AppLayout` terpadu, menghapus `Inertia::location` workaround, dan menampilkan grafik Volume Persuratan interaktif.
-2. **Pembersihan Sisa Rute & Tampilan Blade Prototipe**:
-   - Mengalihkan sisa rute prototipe (`archive.klasifikasi-surat`, `operations.recycle-bin`) ke rute Inertia yang relevan dan menghapus `layouts/app.blade.php` serta `resources/js/app.js`.
-3. **Ketahanan Build Frontend**:
-   - Menerapkan artisan `eoffice:doctor` dan npm script `dev:clean` agar halaman browser tidak mengalami jeda aset tanpa CSS saat build dijalankan.
+## 8. Status Penutupan Fase 3A (Semua Bagian 1, 2, 3, dan 4 Selesai)
+
+1. **Bagian 1 (Keamanan Konten)**: SELESAI (XSS sanitasi ganda, Dompdf hardening, optimistic/pessimistic locking, Security Headers).
+2. **Bagian 2 (RBAC & Instalasi)**: SELESAI (Single source permissions, RolePermissionSeeder, Setup Wizard, pemisahan ProductionSeeder vs DemoSeeder, DisposisiPolicy depth 20 & privacy, docs PERMISSIONS_MATRIX dan README).
+3. **Bagian 3 (UI Satu Layout)**: SELESAI (Dashboard Inertia/React, pembersihan Blade layouts, single menu filtered by permissions, volume chart Chart.js, meta notranslate, ErrorBoundary, zero-downtime assets).
+4. **Bagian 4 (Penutupan Fase 3A)**: SELESAI (Benchmark 100k data lolos SLA, 28 migrasi 100% reversibel rollback sampai kosong dan re-migrate, APP_LOCALE=id, dualitas actions harmonis, OQ-14 terdokumentasi, 160 test PostgreSQL 5433 lulus 100%).
+5. **Fase 3B**: BELUM dan TIDAK dimulai, menunggu instruksi kerja berikutnya sesuai aturan batas lingkup tugas.
 
 ---
 
@@ -204,3 +205,4 @@ git checkout 2550096
 # atau kembali ke commit awal cabang
 git checkout feature/fase-3a-surat-keluar
 ```
+
