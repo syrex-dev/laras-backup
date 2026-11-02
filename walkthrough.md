@@ -3,7 +3,7 @@
 ## 1. Ringkasan
 - **Tanggal Pemutakhiran**: 2 November 2026
 - **Branch**: `feature/fase-3a-surat-keluar`
-- **Rentang Commit Terkini**: `2550096` s.d. `fbe5157`
+- **Rentang Commit Terkini**: `2550096` s.d. `8f4db94`
 - **Fokus Pekerjaan**: Audit menyeluruh sistem persuratan Fase 3A (keamanan konten XSS & Dompdf, persistensi nomor resmi token atomik, row locking konkurensi, standardisasi RBAC PRD, audit migrasi reversibilitas basis data, eliminasi error Ziggy undefined route, perbaikan komponen Select & safe fallback array map di React, dan verifikasi test suite ganda SQLite & PostgreSQL port 5433).
 - **Hasil Utama**: Rangkaian pengujian unit dan fitur berhasil mencapai 100% lulus:
   - **SQLite In-Memory**: 157 lulus, 3 dilewati (1029 assertions).
@@ -122,7 +122,8 @@
    - Klik salah satu akun demo atau masukkan email `admin@contoh.ac.id` dan password `password`.
    - Masuk ke dashboard dan verifikasi navbar memuat nama instansi "Politeknik Contoh Indonesia".
 2. **Penyusunan & Persetujuan Surat Keluar**:
-   - Login sebagai Staf TU (`tu@contoh.ac.id`), buka menu **Surat Keluar** $\rightarrow$ **Buat Draf**.
+   - Buka menu **Surat Keluar** (`http://laras.test/surat-keluar`) — daftar naskah dinas keluar langsung tampil rapi dengan paginasi, filter status, filter sifat, dan filter unit kerja tanpa layar putih (*blank page*) atau runtime error.
+   - Login sebagai Staf TU (`tu@contoh.ac.id`), buka menu **Surat Keluar** $\rightarrow$ **Buat Naskah Baru**.
    - Masukkan perihal, pilih klasifikasi dan penandatangan, lalu klik **Simpan & Ajukan**.
    - Login sebagai Direktur (`direktur@contoh.ac.id`), buka daftar surat keluar yang menunggu persetujuan, klik **Setujui**. Nomor surat otomatis dialokasikan dengan format resmi atomik.
 3. **Uji Keamanan XSS (Script / Error Injection)**:
@@ -195,7 +196,7 @@ Perintah eksekusi: `php artisan eoffice:benchmark-3a`
 
 1. **Bagian 1 (Keamanan Konten)**: SELESAI (XSS sanitasi ganda, Dompdf hardening, optimistic/pessimistic locking, Security Headers).
 2. **Bagian 2 (RBAC & Instalasi)**: SELESAI (Single source permissions, RolePermissionSeeder, Setup Wizard, pemisahan ProductionSeeder vs DemoSeeder, DisposisiPolicy depth 20 & privacy, docs PERMISSIONS_MATRIX dan README).
-3. **Bagian 3 (UI Satu Layout)**: SELESAI (Dashboard Inertia/React, pembersihan Blade layouts, single menu filtered by permissions, volume chart Chart.js, meta notranslate, ErrorBoundary, zero-downtime assets).
+3. **Bagian 3 (UI Satu Layout)**: SELESAI (Dashboard Inertia/React, pembersihan Blade layouts, single menu filtered by permissions, volume chart Chart.js, meta notranslate, ErrorBoundary, zero-downtime assets, eliminasi total error runtime React `route is not defined` dan `Cannot read properties of undefined (reading 'map')` pada Surat Keluar dan komponen Select).
 4. **Bagian 4 (Penutupan Fase 3A)**: SELESAI (Benchmark 100k data lolos SLA, 28 migrasi 100% reversibel rollback sampai kosong dan re-migrate, APP_LOCALE=id, dualitas actions harmonis, OQ-14 terdokumentasi, 160 test PostgreSQL 5433 lulus 100%).
 5. **Fase 3B**: BELUM dan TIDAK dimulai, menunggu instruksi kerja berikutnya sesuai aturan batas lingkup tugas.
 
