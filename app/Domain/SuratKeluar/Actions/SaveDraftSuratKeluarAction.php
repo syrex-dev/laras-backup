@@ -80,6 +80,7 @@ class SaveDraftSuratKeluarAction
             'sifat' => $data['sifat'] ?? SuratKeluar::SIFAT_BIASA,
             'status' => SuratKeluar::STATUS_DRAF,
             'status_approval' => 'draft',
+            'tanggal_surat' => $data['tanggal_surat'] ?? null,
             'metadata' => $data['metadata'] ?? [],
             'qr_token' => $data['qr_token'] ?? null,
             'lampiran' => $data['lampiran'] ?? null,
@@ -150,6 +151,7 @@ class SaveDraftSuratKeluarAction
             'isi_surat' => $data['isi_surat'] ?? $existing->isi_surat,
             'isi' => $data['isi_surat'] ?? $existing->isi_surat,
             'sifat' => $data['sifat'] ?? $existing->sifat,
+            'tanggal_surat' => $data['tanggal_surat'] ?? $existing->tanggal_surat,
             'metadata' => $data['metadata'] ?? $existing->metadata,
             'lampiran' => $data['lampiran'] ?? $existing->lampiran,
         ]);
