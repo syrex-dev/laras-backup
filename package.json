@@ -3,8 +3,9 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "vite build",
-        "dev": "vite",
+        "dev:clean": "node -e \"const fs=require('fs'); if(fs.existsSync('public/hot')) fs.unlinkSync('public/hot');\"",
+        "build": "npm run dev:clean && vite build",
+        "dev": "npm run dev:clean && vite",
         "typecheck": "tsc --noEmit",
         "lint": "eslint resources/js"
     },

@@ -18,6 +18,10 @@ export default defineConfig({
             '@': path.resolve(__dirname, 'resources/js'),
         },
     },
+    build: {
+        emptyOutDir: false,
+        manifest: 'manifest.json',
+    },
     server: {
         watch: {
             ignored: ['**/storage/framework/views/**'],
