@@ -3,8 +3,8 @@
 ## 1. Ringkasan
 - **Tanggal Pemutakhiran**: 2 November 2026
 - **Branch**: `feature/fase-3a-surat-keluar`
-- **Rentang Commit Terkini**: `2550096` s.d. `e61adc9`
-- **Fokus Pekerjaan**: Audit menyeluruh sistem persuratan Fase 3A (keamanan konten XSS & Dompdf, persistensi nomor resmi token atomik, row locking konkurensi, standardisasi RBAC PRD, audit migrasi reversibilitas basis data, perbaikan relasi model SuratKeluar & eliminasi error Ziggy undefined route di React, dan verifikasi test suite ganda SQLite & PostgreSQL port 5433).
+- **Rentang Commit Terkini**: `2550096` s.d. `fbe5157`
+- **Fokus Pekerjaan**: Audit menyeluruh sistem persuratan Fase 3A (keamanan konten XSS & Dompdf, persistensi nomor resmi token atomik, row locking konkurensi, standardisasi RBAC PRD, audit migrasi reversibilitas basis data, eliminasi error Ziggy undefined route, perbaikan komponen Select & safe fallback array map di React, dan verifikasi test suite ganda SQLite & PostgreSQL port 5433).
 - **Hasil Utama**: Rangkaian pengujian unit dan fitur berhasil mencapai 100% lulus:
   - **SQLite In-Memory**: 157 lulus, 3 dilewati (1029 assertions).
   - **PostgreSQL port 5433**: 160 lulus, 0 dilewati, 0 gagal (1033 assertions, seluruh uji konkurensi dan trigger append-only berjalan sempurna).
@@ -73,6 +73,8 @@
 | **3.7 Build Tanpa Jeda Aset & eoffice:doctor** | SELESAI | `7ab4bf0` | Zero-downtime asset swap (`emptyOutDir: false`, `manifest.json`), script `dev:clean`, dan artisan command `php artisan eoffice:doctor`. |
 | **3.8 Pengujian UI Inertia & Manifest Asset** | SELESAI | `efd39a6`, `7e3af3f` | Suite pengujian `InertiaUiAndAssetIntegrityTest` menguji rute navigasi, manifest hash, file fisik, dan harmonisasi test view ke Inertia. |
 | **3.9 Perbaikan Undefined Route & Relasi Model** | SELESAI | `ab596ee`, `e61adc9` | Memperbaiki relasi `creator` pada model `SuratKeluar` (`routes/web.php`) dan mengganti seluruh pemanggilan helper `route(...)` di React Surat Keluar (`Index`, `Create`, `Edit`, `Show`) ke path URL RESTful standar, plus menambahkan defensive fallback di `bootstrap.js`. |
+| **3.10 Perbaikan Komponen Select & Safe Mapping** | SELESAI | `fbe5157` | Memperbaiki komponen `Select.tsx` agar `options` opsional dan mendukung `children` `<option>`, serta menambahkan safe fallbacks pada seluruh pemanggilan `.map(...)` di `Index`, `Create`, `Edit`, dan `Show` Surat Keluar untuk mengeliminasi error `Cannot read properties of undefined (reading 'map')`. |
+
 
 
 ---
