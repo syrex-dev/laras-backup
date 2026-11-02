@@ -47,20 +47,14 @@ class UserController extends Controller
         ]);
     }
 
-    public function create()
+    public function create(Request $request)
     {
-        $roles = Role::all();
-        $positions = Position::all();
-
-        return view('organization.users.create', compact('roles', 'positions'));
+        return $this->index($request);
     }
 
-    public function edit(User $user)
+    public function edit(User $user, Request $request)
     {
-        $roles = Role::all();
-        $positions = Position::all();
-
-        return view('organization.users.edit', compact('user', 'roles', 'positions'));
+        return $this->index($request);
     }
 
     public function store(Request $request)

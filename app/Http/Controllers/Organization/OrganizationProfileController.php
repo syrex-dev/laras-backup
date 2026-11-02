@@ -11,9 +11,7 @@ class OrganizationProfileController extends Controller
 {
     public function index()
     {
-        $profile = \App\Domain\Instansi\Models\InstitutionProfile::first() ?? \App\Domain\Instansi\Models\InstitutionProfile::current();
-
-        return view('organization.profile.index', compact('profile'));
+        return app(InstitutionProfileController::class)->edit();
     }
 
     public function update(UpdateOrganizationProfileRequest $request, UpdateOrganizationProfileAction $updateAction)

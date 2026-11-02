@@ -9,22 +9,21 @@ use App\Http\Requests\Archive\StoreTemplateSuratRequest;
 use App\Http\Requests\Archive\UpdateTemplateSuratRequest;
 use App\Models\TemplatSurat;
 use App\Traits\Loggable;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class TemplateSuratController extends Controller
 {
     use Loggable;
 
-    public function index()
+    public function index(Request $request)
     {
-        $templates = TemplatSurat::query()->latest()->paginate(10);
-
-        return view('archive.template-surat.index', compact('templates'));
+        return app(\App\Http\Controllers\SuratKeluar\TemplateSuratController::class)->index($request);
     }
 
-    public function create()
+    public function create(Request $request)
     {
-        return view('archive.template-surat.create');
+        return $this->index($request);
     }
 
     public function store(StoreTemplateSuratRequest $request, CreateTemplateSuratAction $createAction)
@@ -35,24 +34,14 @@ class TemplateSuratController extends Controller
             ->with('success', 'Template surat berhasil ditambahkan.');
     }
 
-    public function show(TemplatSurat $templateSurat)
+    public function show(TemplatSurat $templateSurat, Request $request)
     {
-        $htmlContent = '';
-        if ($templateSurat->path_file && Storage::disk('public')->exists($templateSurat->path_file)) {
-            $htmlContent = Storage::disk('public')->get($templateSurat->path_file);
-        }
-
-        return view('archive.template-surat.show', compact('templateSurat', 'htmlContent'));
+        return $this->index($request);
     }
 
-    public function edit(TemplatSurat $templateSurat)
+    public function edit(TemplatSurat $templateSurat, Request $request)
     {
-        $htmlContent = '';
-        if ($templateSurat->path_file && Storage::disk('public')->exists($templateSurat->path_file)) {
-            $htmlContent = Storage::disk('public')->get($templateSurat->path_file);
-        }
-
-        return view('archive.template-surat.edit', compact('templateSurat', 'htmlContent'));
+        return $this->index($request);
     }
 
     public function update(UpdateTemplateSuratRequest $request, TemplatSurat $templateSurat, UpdateTemplateSuratAction $updateAction)

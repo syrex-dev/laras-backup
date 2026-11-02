@@ -6,6 +6,7 @@ use App\Domain\Organization\Actions\SaveTandaTanganAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Organization\StoreTandaTanganRequest;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class TandaTanganController extends Controller
 {
@@ -14,7 +15,9 @@ class TandaTanganController extends Controller
         $user = Auth::user();
         $tandaTangan = $user->tandaTangan;
 
-        return view('organization.signature.index', compact('tandaTangan'));
+        return Inertia::render('Organisasi/TandaTangan', [
+            'tandaTangan' => $tandaTangan,
+        ]);
     }
 
     public function store(StoreTandaTanganRequest $request, SaveTandaTanganAction $saveAction)

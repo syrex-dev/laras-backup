@@ -54,19 +54,11 @@ class SuratMasukController extends Controller
             ]);
         }
 
-        if ($request->header('X-Inertia')) {
-            return Inertia::render('SuratMasuk/Index', [
-                'suratMasuk' => $suratMasuk,
-                'klasifikasiList' => $klasifikasiList,
-                'unitsList' => $unitsList,
-                'filters' => $filters,
-            ]);
-        }
-
-        // Blade fallback for legacy tests
-        return view('letters.surat-masuk.index', [
+        return Inertia::render('SuratMasuk/Index', [
             'suratMasuk' => $suratMasuk,
             'klasifikasiList' => $klasifikasiList,
+            'unitsList' => $unitsList,
+            'filters' => $filters,
         ]);
     }
 
@@ -80,14 +72,10 @@ class SuratMasukController extends Controller
         $klasifikasiList = KlasifikasiSurat::orderBy('kode_klasifikasi')->get();
         $unitsList = OrgUnit::orderBy('order_index')->get();
 
-        if ($request->header('X-Inertia')) {
-            return Inertia::render('SuratMasuk/Create', [
-                'klasifikasiList' => $klasifikasiList,
-                'unitsList' => $unitsList,
-            ]);
-        }
-
-        return view('letters.surat-masuk.create', compact('klasifikasiList'));
+        return Inertia::render('SuratMasuk/Create', [
+            'klasifikasiList' => $klasifikasiList,
+            'unitsList' => $unitsList,
+        ]);
     }
 
     /**
@@ -151,10 +139,6 @@ class SuratMasukController extends Controller
             return Gate::forUser($currentUser)->allows('view', $disposisi);
         })->values();
 
-        if ($request->has('legacy_view')) {
-            return view('letters.surat-masuk.show', compact('suratMasuk'));
-        }
-
         return Inertia::render('SuratMasuk/Show', [
             'surat' => $suratMasuk,
             'auditLogs' => $auditLogs,
@@ -172,15 +156,11 @@ class SuratMasukController extends Controller
         $klasifikasiList = KlasifikasiSurat::orderBy('kode_klasifikasi')->get();
         $unitsList = OrgUnit::orderBy('order_index')->get();
 
-        if ($request->header('X-Inertia')) {
-            return Inertia::render('SuratMasuk/Edit', [
-                'surat' => $suratMasuk->load(['klasifikasi', 'unitTujuan', 'attachments']),
-                'klasifikasiList' => $klasifikasiList,
-                'unitsList' => $unitsList,
-            ]);
-        }
-
-        return view('letters.surat-masuk.edit', compact('suratMasuk', 'klasifikasiList'));
+        return Inertia::render('SuratMasuk/Edit', [
+            'surat' => $suratMasuk->load(['klasifikasi', 'unitTujuan', 'attachments']),
+            'klasifikasiList' => $klasifikasiList,
+            'unitsList' => $unitsList,
+        ]);
     }
 
     /**

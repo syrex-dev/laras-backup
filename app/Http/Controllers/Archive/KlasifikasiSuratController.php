@@ -8,19 +8,22 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Archive\StoreKlasifikasiSuratRequest;
 use App\Http\Requests\Archive\UpdateKlasifikasiSuratRequest;
 use App\Models\KlasifikasiSurat;
+use Inertia\Inertia;
 
 class KlasifikasiSuratController extends Controller
 {
     public function index()
     {
-        $klasifikasi = KlasifikasiSurat::query()->latest()->paginate(10);
+        $klasifikasi = KlasifikasiSurat::query()->latest()->paginate(15);
 
-        return view('archive.klasifikasi-surat.index', compact('klasifikasi'));
+        return Inertia::render('Kearsipan/KlasifikasiSurat', [
+            'klasifikasi' => $klasifikasi,
+        ]);
     }
 
     public function create()
     {
-        return view('archive.klasifikasi-surat.create');
+        return $this->index();
     }
 
     public function store(StoreKlasifikasiSuratRequest $request, CreateKlasifikasiAction $createAction)
@@ -33,12 +36,12 @@ class KlasifikasiSuratController extends Controller
 
     public function show(KlasifikasiSurat $klasifikasiSurat)
     {
-        return view('archive.klasifikasi-surat.show', compact('klasifikasiSurat'));
+        return $this->index();
     }
 
     public function edit(KlasifikasiSurat $klasifikasiSurat)
     {
-        return view('archive.klasifikasi-surat.edit', compact('klasifikasiSurat'));
+        return $this->index();
     }
 
     public function update(UpdateKlasifikasiSuratRequest $request, KlasifikasiSurat $klasifikasiSurat, UpdateKlasifikasiAction $updateAction)

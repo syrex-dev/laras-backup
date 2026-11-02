@@ -13,6 +13,7 @@ use App\Models\SuratMasuk;
 use App\Models\User;
 use App\Notifications\DisposisiSelesai;
 use App\Traits\Loggable;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
@@ -20,30 +21,14 @@ class DisposisiController extends Controller
 {
     use Loggable;
 
-    public function index()
+    public function index(Request $request)
     {
-        $query = Disposisi::query()->with(['suratMasuk', 'pengirim', 'penerima'])->latest();
-
-        /** @var User $user */
-        $user = Auth::user();
-
-        if ($user->can('disposisi.kelola')) {
-            $disposisi = $query->paginate(10);
-        } elseif ($user->can('disposisi.buat')) {
-            $disposisi = $query->where('pengirim_id', $user->id)->paginate(10);
-        } else {
-            $disposisi = $query->where('penerima_id', $user->id)->paginate(10);
-        }
-
-        return view('letters.disposisi.index', compact('disposisi'));
+        return app(\App\Http\Controllers\Disposisi\DisposisiController::class)->index($request);
     }
 
-    public function create()
+    public function create(Request $request)
     {
-        $suratMasuk = SuratMasuk::all();
-        $users = User::all();
-
-        return view('letters.disposisi.create', compact('suratMasuk', 'users'));
+        return app(\App\Http\Controllers\Disposisi\DisposisiController::class)->index($request);
     }
 
     public function store(StoreDisposisiRequest $request, CreateDisposisiAction $createAction)
@@ -94,7 +79,7 @@ class DisposisiController extends Controller
             $statusAction->markAsRead($disposisi);
         }
 
-        return view('letters.disposisi.show', compact('disposisi'));
+        return app(\App\Http\Controllers\Disposisi\DisposisiController::class)->index(request());
     }
 
     public function updateStatus(UpdateDisposisiStatusRequest $request, Disposisi $disposisi)

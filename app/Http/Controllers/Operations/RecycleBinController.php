@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\SuratKeluar;
 use App\Models\SuratMasuk;
 use Illuminate\Support\Facades\Log;
+use Inertia\Inertia;
 
 class RecycleBinController extends Controller
 {
@@ -29,7 +30,9 @@ class RecycleBinController extends Controller
 
         $trashedItems = $trashedSuratMasuk->concat($trashedSuratKeluar);
 
-        return view('operations.recycle-bin.index', compact('trashedItems'));
+        return Inertia::render('Operasi/RecycleBin', [
+            'trashedItems' => $trashedItems,
+        ]);
     }
 
     public function restore($type, $id, RestoreRecycleBinAction $restoreAction)

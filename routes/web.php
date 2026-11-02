@@ -157,7 +157,11 @@ Route::middleware(['auth'])->group(function () {
     // Admin Suite (Eksklusif: Admin Instansi via permission)
     Route::group(['prefix' => 'admin', 'as' => 'admin.', 'middleware' => ['permission:organisasi.kelola|sistem.pemeliharaan']], function () {
         Route::get('/logs', function () {
-            return view('operations.logs.index');
+            $logs = \App\Models\LogAktivitas::with('user')->latest()->paginate(20);
+
+            return Inertia::render('Operasi/Logs', [
+                'logs' => $logs,
+            ]);
         })->name('logs.index');
 
         Route::get('/profile', [OrganizationProfileController::class, 'index'])->name('profile.index');
