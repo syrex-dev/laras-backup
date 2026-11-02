@@ -63,7 +63,7 @@ export default function Index({ suratKeluar, klasifikasiList, unitsList, filters
 
     const handleFilter = (e?: React.FormEvent) => {
         if (e) e.preventDefault();
-        router.get(route('surat-keluar.index'), {
+        router.get('/surat-keluar', {
             search: search || undefined,
             status: status || undefined,
             sifat: sifat || undefined,
@@ -80,7 +80,7 @@ export default function Index({ suratKeluar, klasifikasiList, unitsList, filters
         setUnitId('');
         setStartDate('');
         setEndDate('');
-        router.get(route('surat-keluar.index'), {}, { preserveState: true, replace: true });
+        router.get('/surat-keluar', {}, { preserveState: true, replace: true });
     };
 
     const getStatusBadge = (st: string) => {
@@ -139,7 +139,7 @@ export default function Index({ suratKeluar, klasifikasiList, unitsList, filters
                                 Template Naskah
                             </Button>
                         </Link>
-                        <Link href={route('surat-keluar.create')}>
+                        <Link href="/surat-keluar/create">
                             <Button variant="primary" className="flex items-center gap-2 shadow-sm">
                                 <Plus className="w-4 h-4" />
                                 Buat Naskah Baru
@@ -275,7 +275,7 @@ export default function Index({ suratKeluar, klasifikasiList, unitsList, filters
                                         <div className="flex flex-col items-center justify-center space-y-2">
                                             <Send className="w-8 h-8 text-gray-300 dark:text-gray-600" />
                                             <p className="font-medium">Belum ada naskah dinas keluar yang cocok.</p>
-                                            <Link href={route('surat-keluar.create')}>
+                                            <Link href="/surat-keluar/create">
                                                 <Button variant="outline" size="sm" className="mt-2">Buat Draf Pertama</Button>
                                             </Link>
                                         </div>
@@ -330,14 +330,14 @@ export default function Index({ suratKeluar, klasifikasiList, unitsList, filters
 
                                         <TableCell className="text-right">
                                             <div className="flex items-center justify-end gap-1">
-                                                <Link href={route('surat-keluar.show', row.id)}>
+                                                <Link href={`/surat-keluar/${row.id}`}>
                                                     <Button variant="ghost" size="sm" title="Lihat Detail & Lini Masa">
                                                         <Eye className="w-4 h-4 text-gray-600 dark:text-gray-300" />
                                                     </Button>
                                                 </Link>
 
                                                 {['draf', 'revisi'].includes(row.status) && (
-                                                    <Link href={route('surat-keluar.edit', row.id)}>
+                                                    <Link href={`/surat-keluar/${row.id}/edit`}>
                                                         <Button variant="ghost" size="sm" title="Edit Draf">
                                                             <Edit3 className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                                                         </Button>
@@ -345,7 +345,7 @@ export default function Index({ suratKeluar, klasifikasiList, unitsList, filters
                                                 )}
 
                                                 {row.status === 'bernomor' && (
-                                                    <a href={route('surat-keluar.pdf', row.id)} target="_blank" rel="noopener noreferrer">
+                                                    <a href={`/surat-keluar/${row.id}/pdf`} target="_blank" rel="noopener noreferrer">
                                                         <Button variant="ghost" size="sm" title="Unduh PDF Resmi">
                                                             <Printer className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                                                         </Button>

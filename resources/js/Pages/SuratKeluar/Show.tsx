@@ -93,35 +93,35 @@ export default function Show({
 
     const handleApprove = () => {
         approveForm.setData('catatan', actionNote);
-        approveForm.patch(route('surat-keluar.approve', suratKeluar.id), {
+        approveForm.patch(`/surat-keluar/${suratKeluar.id}/approve`, {
             onSuccess: () => setActionModal(null),
         });
     };
 
     const handleRevise = () => {
         reviseForm.setData('catatan', actionNote);
-        reviseForm.patch(route('surat-keluar.revise', suratKeluar.id), {
+        reviseForm.patch(`/surat-keluar/${suratKeluar.id}/revise`, {
             onSuccess: () => setActionModal(null),
         });
     };
 
     const handleReject = () => {
         rejectForm.setData('alasan', actionNote);
-        rejectForm.patch(route('surat-keluar.reject', suratKeluar.id), {
+        rejectForm.patch(`/surat-keluar/${suratKeluar.id}/reject`, {
             onSuccess: () => setActionModal(null),
         });
     };
 
     const handleCancel = () => {
         cancelForm.setData('alasan_batal', actionNote);
-        cancelForm.post(route('surat-keluar.cancel', suratKeluar.id), {
+        cancelForm.post(`/surat-keluar/${suratKeluar.id}/cancel`, {
             onSuccess: () => setActionModal(null),
         });
     };
 
     const handleResolveDisposisi = () => {
         resolveForm.setData('catatan', actionNote);
-        resolveForm.post(route('surat-keluar.resolve-disposisi', suratKeluar.id), {
+        resolveForm.post(`/surat-keluar/${suratKeluar.id}/resolve-disposisi`, {
             onSuccess: () => setActionModal(null),
         });
     };
@@ -153,7 +153,7 @@ export default function Show({
                 {/* Header Page */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
                     <div className="flex items-center gap-3">
-                        <Link href={route('surat-keluar.index')}>
+                        <Link href="/surat-keluar">
                             <Button variant="outline" size="sm">
                                 <ArrowLeft className="w-4 h-4" />
                             </Button>
@@ -175,7 +175,7 @@ export default function Show({
 
                     <div className="flex items-center gap-2 flex-wrap">
                         {canEdit && (
-                            <Link href={route('surat-keluar.edit', suratKeluar.id)}>
+                            <Link href={`/surat-keluar/${suratKeluar.id}/edit`}>
                                 <Button variant="outline" size="sm" className="flex items-center gap-1.5">
                                     <Edit3 className="w-3.5 h-3.5" /> Edit Draf
                                 </Button>
@@ -183,7 +183,7 @@ export default function Show({
                         )}
 
                         {['bernomor', 'disetujui'].includes(suratKeluar.status) && (
-                            <a href={route('surat-keluar.pdf', suratKeluar.id)} target="_blank" rel="noopener noreferrer">
+                            <a href={`/surat-keluar/${suratKeluar.id}/pdf`} target="_blank" rel="noopener noreferrer">
                                 <Button variant="primary" size="sm" className="flex items-center gap-1.5">
                                     <Printer className="w-3.5 h-3.5" /> Unduh PDF Resmi
                                 </Button>

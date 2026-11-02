@@ -95,7 +95,7 @@ export default function Edit({
 
     const handleSubmit = (submitNow: boolean) => {
         data.submit_now = submitNow;
-        put(route('surat-keluar.update', suratKeluar.id));
+        put(`/surat-keluar/${suratKeluar.id}`);
     };
 
     return (
@@ -106,7 +106,7 @@ export default function Edit({
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
                     <div className="flex items-center gap-3">
-                        <Link href={route('surat-keluar.show', suratKeluar.id)}>
+                        <Link href={`/surat-keluar/${suratKeluar.id}`}>
                             <Button variant="outline" size="sm">
                                 <ArrowLeft className="w-4 h-4" />
                             </Button>

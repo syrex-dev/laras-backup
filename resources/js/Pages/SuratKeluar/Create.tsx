@@ -108,7 +108,7 @@ export default function Create({
 
     const handleSubmit = (submitNow: boolean) => {
         data.submit_now = submitNow;
-        post(route('surat-keluar.store'));
+        post('/surat-keluar');
     };
 
     return (
@@ -119,7 +119,7 @@ export default function Create({
                 {/* Header Page */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
                     <div className="flex items-center gap-3">
-                        <Link href={route('surat-keluar.index')}>
+                        <Link href="/surat-keluar">
                             <Button variant="outline" size="sm">
                                 <ArrowLeft className="w-4 h-4" />
                             </Button>
