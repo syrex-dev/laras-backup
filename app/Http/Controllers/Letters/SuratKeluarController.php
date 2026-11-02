@@ -260,16 +260,20 @@ class SuratKeluarController extends Controller
         $suratKeluar->load(['template', 'klasifikasi', 'orgUnit', 'penandatangan.position', 'attachments']);
 
         $templates = TemplateSurat::where('is_active', true)->orderBy('nama')->get();
+        if ($templates->isEmpty() && class_exists(\App\Models\TemplatSurat::class)) {
+            $legacyTemplates = \App\Models\TemplatSurat::all();
+            if ($legacyTemplates->isNotEmpty()) {
+                $templates = $legacyTemplates->map(fn ($t) => (object) [
+                    'id' => $t->id,
+                    'nama' => $t->nama_templat,
+                    'jenis' => 'umum',
+                    'konten_default' => '',
+                ]);
+            }
+        }
         $klasifikasiList = KlasifikasiSurat::orderBy('kode_klasifikasi')->get();
         $unitsList = OrgUnit::orderBy('order_index')->get();
         $signers = User::with('position')->orderBy('name')->get();
-
-        if (! $request->header('X-Inertia') && ! $request->wantsJson() && view()->exists('letters.surat-keluar.edit')) {
-            $klasifikasi = $klasifikasiList;
-            $pimpinan = $signers;
-            $templates = \App\Models\TemplatSurat::all();
-            return view('letters.surat-keluar.edit', compact('suratKeluar', 'klasifikasi', 'pimpinan', 'templates'));
-        }
 
         return Inertia::render('SuratKeluar/Edit', [
             'suratKeluar' => $suratKeluar,

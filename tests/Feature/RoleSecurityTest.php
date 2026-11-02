@@ -11,6 +11,7 @@ use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class RoleSecurityTest extends TestCase
@@ -155,8 +156,11 @@ class RoleSecurityTest extends TestCase
         $this->actingAs($stafTu)
             ->get('/surat-keluar/'.$suratKeluar->id.'/edit')
             ->assertOk()
-            ->assertSee('Template Surat')
-            ->assertSee('Template Uji QA');
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('SuratKeluar/Edit')
+                ->has('templates')
+                ->where('templates.0.nama', 'Template Uji QA')
+            );
     }
 
     public function test_public_verification_route_returns_200_for_valid_token_and_404_for_invalid_token(): void

@@ -153,6 +153,36 @@ export default function Edit({
                                 Substansi Naskah Dinas
                             </h2>
 
+                            {/* Template Selector */}
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                                    Template Surat
+                                </label>
+                                <Select
+                                    value={data.template_id}
+                                    onChange={(e) => {
+                                        const templateId = e.target.value;
+                                        setData('template_id', templateId);
+                                        const selected = templates.find((t) => String(t.id) === templateId);
+                                        if (selected && selected.konten_default && !data.isi_surat) {
+                                            setData((prev) => ({
+                                                ...prev,
+                                                template_id: templateId,
+                                                isi_surat: selected.konten_default,
+                                            }));
+                                        }
+                                    }}
+                                    className="text-sm"
+                                >
+                                    <option value="">-- Tanpa Template / Naskah Bebas --</option>
+                                    {templates.map((tpl) => (
+                                        <option key={tpl.id} value={tpl.id}>
+                                            {tpl.nama} {tpl.jenis ? `(${tpl.jenis.replace('_', ' ').toUpperCase()})` : ''}
+                                        </option>
+                                    ))}
+                                </Select>
+                            </div>
+
                             {/* Perihal & Tujuan */}
                             <div className="space-y-3">
                                 <div>

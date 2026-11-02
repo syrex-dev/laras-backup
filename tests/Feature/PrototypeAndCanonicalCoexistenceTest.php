@@ -12,6 +12,7 @@ use App\Models\SuratKeluar as ProxySuratKeluar;
 use App\Models\User;
 use Database\Seeders\ProductionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class PrototypeAndCanonicalCoexistenceTest extends TestCase
@@ -101,8 +102,10 @@ class PrototypeAndCanonicalCoexistenceTest extends TestCase
         $user = User::factory()->create();
         $authResp = $this->actingAs($user)->get('/dashboard');
         $authResp->assertOk();
-        $authResp->assertViewIs('dashboard');
-        $authResp->assertViewHas('stats');
+        $authResp->assertInertia(fn (Assert $page) => $page
+            ->component('Dashboard')
+            ->has('stats')
+        );
     }
 
     /**
@@ -149,7 +152,9 @@ class PrototypeAndCanonicalCoexistenceTest extends TestCase
 
         $adminResp = $this->actingAs($admin)->get('/admin/recycle-bin');
         $adminResp->assertOk();
-        $adminResp->assertViewIs('operations.recycle-bin.index');
+        $adminResp->assertInertia(fn (Assert $page) => $page
+            ->component('Operasi/RecycleBin')
+        );
     }
 
     /**
