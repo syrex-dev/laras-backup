@@ -24,6 +24,7 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::dropIfExists('templat_surat');
         Schema::dropIfExists('template_surat');
     }
 };

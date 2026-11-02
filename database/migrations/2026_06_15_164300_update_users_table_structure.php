@@ -22,6 +22,9 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             if (Schema::hasColumn('users', 'nama')) {
+                if (Schema::hasColumn('users', 'name')) {
+                    $table->dropColumn('name');
+                }
                 $table->renameColumn('nama', 'name');
             }
             if (Schema::hasColumn('users', 'role_id')) {

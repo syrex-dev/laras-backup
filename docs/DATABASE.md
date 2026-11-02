@@ -407,14 +407,16 @@ Pada penutupan Fase 3A (butir 3.2), seluruh migrasi Fase 3A telah diuji siklus h
 | `2026_10_30_000004_create_fase_3a_surat_keluar_tables.php` | `83e227b` | **Diedit 1x** di commit `3175bb9` | Menambahkan tabel `numbering_sequences`, `surat_keluar_approvals`, `surat_keluar_versions`, serta menyempurnakan kolom penomoran token atomik (`current_number`, `format_pattern`, `reset_frequency`). |
 | `2026_10_30_000005_add_surat_keluar_scale_indexes.php` | `7ca40dc` | **Tidak Pernah Diedit** | Indeks skala komposit (`status+id`, `status+sifat+id`, `org_unit+status+id`) dan indeks trigram GIN untuk pencarian teks perihal/tujuan. Dilengkapi klausul guard `DB::getDriverName() === 'pgsql'` agar aman dijalankan pada SQLite. |
 
-### 7.2 Hasil Pengujian Reversibilitas (Rollback & Re-Migrate)
+### 7.2 Hasil Pengujian Reversibilitas (Full Rollback Sampai Kosong & Re-Migrate)
 
-1. **PostgreSQL port 5433 (`laras_test`):**
-   * `migrate:fresh`: Sukses mengeksekusi 28 berkas migrasi dalam ~1.8 detik.
-   * `migrate:rollback --step=2`: Sukses menggugurkan migrasi skala `000005` (112.82ms) dan `000004` (36.91ms) tanpa sisa tabel yatim atau foreign key violation.
-   * `migrate`: Sukses mengaplikasikan kembali migrasi `000004` (285.89ms) dan `000005` (34.38ms) dengan hasil skema 100% identik.
-2. **SQLite (`database.sqlite`):**
-   * `migrate:fresh`: Sukses mengeksekusi seluruh migrasi dalam ~35 detik.
-   * `migrate:rollback --step=2`: Sukses menggugurkan migrasi `000004` dan `000003` tanpa kesalahan sintaks.
-   * `migrate`: Sukses re-migrate hingga migrasi `000005` secara konsisten.
+1. **PostgreSQL port 5433 (`laras`):**
+   * **Eksekusi Rollback Menyeluruh**: `php artisan migrate:reset` berhasil menggugurkan **seluruh 28 file migrasi** dari batch terakhir hingga migrasi perdana `0001_01_01_000000_create_users_table` sampai database bersih total (0 tabel migrasi tertinggal).
+   * **Perbaikan Skema Reversibilitas**:
+     - Memperbaiki `2026_05_23_125418_create_template_surat_table.php`: `down()` kini menggugurkan tabel `templat_surat` dan `template_surat` secara benar.
+     - Memperbaiki `2026_06_15_164300_update_users_table_structure.php`: `down()` kini idempoten saat merename kolom `nama` kembali ke `name` jika kolom `name` sudah ada.
+     - Memperbaiki `2026_10_29_000001_create_fase_0_foundation_tables.php`: `down()` kini membuang kolom `name` jika kedua kolom (`nama` dan `name`) ada.
+     - Memperbaiki `database/seeders/SuratDemoSeeder.php`: menyetel `templat_surat_id => null` untuk mencegah pelanggaran foreign key relasi tabel warisan.
+   * **Eksekusi Re-Migrate Bersih**: `php artisan migrate` sukses menjalankan kembali seluruh 28 migrasi berturut-turut tanpa error (`Batch [1] Ran`).
+2. **SQLite (`laras_test` & `:memory:`):**
+   * Sukses mengeksekusi migrasi dan rollback tanpa kegagalan sintaks DDL.
 

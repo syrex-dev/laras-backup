@@ -220,7 +220,11 @@ return new class extends Migration
 
         Schema::table('users', function (Blueprint $table) {
             $table->dropForeign(['position_id']);
-            $table->dropColumn(['nip', 'position_id', 'phone', 'is_active', 'signature_image_path', 'two_factor_secret']);
+            $columnsToDrop = ['nip', 'position_id', 'phone', 'is_active', 'signature_image_path', 'two_factor_secret'];
+            if (Schema::hasColumn('users', 'nama') && Schema::hasColumn('users', 'name')) {
+                $columnsToDrop[] = 'name';
+            }
+            $table->dropColumn($columnsToDrop);
         });
 
         Schema::dropIfExists('positions');

@@ -109,7 +109,7 @@ class SuratDemoSeeder extends Seeder
                 'user_id' => $tu->id,
                 'penyetuju_id' => $direktur->id,
                 'template_id' => $template->id,
-                'templat_surat_id' => $template->id,
+                'templat_surat_id' => null,
             ],
             [
                 'nomor_surat' => '002/PBR/POLTEK/X/2026',
@@ -122,7 +122,7 @@ class SuratDemoSeeder extends Seeder
                 'user_id' => $tu->id,
                 'penyetuju_id' => $direktur->id,
                 'template_id' => $template->id,
-                'templat_surat_id' => $template->id,
+                'templat_surat_id' => null,
                 'qr_token' => 'QR-'.Str::uuid()->toString(),
             ],
             [
@@ -136,7 +136,7 @@ class SuratDemoSeeder extends Seeder
                 'user_id' => $tu->id,
                 'penyetuju_id' => $direktur->id,
                 'template_id' => $template->id,
-                'templat_surat_id' => $template->id,
+                'templat_surat_id' => null,
             ],
         ];
 
