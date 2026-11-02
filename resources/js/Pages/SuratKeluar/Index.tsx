@@ -51,15 +51,20 @@ interface IndexProps {
     };
 }
 
-export default function Index({ suratKeluar, klasifikasiList, unitsList, filters }: IndexProps) {
+export default function Index({
+    suratKeluar = { data: [], current_page: 1, last_page: 1, total: 0, from: 0, to: 0 },
+    klasifikasiList = [],
+    unitsList = [],
+    filters = {}
+}: IndexProps) {
     const { term } = useTerminology();
 
-    const [search, setSearch] = useState(filters.search || '');
-    const [status, setStatus] = useState(filters.status || '');
-    const [sifat, setSifat] = useState(filters.sifat || '');
-    const [unitId, setUnitId] = useState(filters.org_unit_id || '');
-    const [startDate, setStartDate] = useState(filters.start_date || '');
-    const [endDate, setEndDate] = useState(filters.end_date || '');
+    const [search, setSearch] = useState(filters?.search || '');
+    const [status, setStatus] = useState(filters?.status || '');
+    const [sifat, setSifat] = useState(filters?.sifat || '');
+    const [unitId, setUnitId] = useState(filters?.org_unit_id || '');
+    const [startDate, setStartDate] = useState(filters?.start_date || '');
+    const [endDate, setEndDate] = useState(filters?.end_date || '');
 
     const handleFilter = (e?: React.FormEvent) => {
         if (e) e.preventDefault();
@@ -210,7 +215,7 @@ export default function Index({ suratKeluar, klasifikasiList, unitsList, filters
                                     className="text-sm"
                                 >
                                     <option value="">Semua Unit</option>
-                                    {unitsList.map((u) => (
+                                    {(unitsList || []).map((u) => (
                                         <option key={u.id} value={u.id}>
                                             {u.name} ({u.code})
                                         </option>
@@ -269,7 +274,7 @@ export default function Index({ suratKeluar, klasifikasiList, unitsList, filters
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {suratKeluar.data.length === 0 ? (
+                            {(!suratKeluar?.data || suratKeluar.data.length === 0) ? (
                                 <TableRow>
                                     <TableCell colSpan={7} className="text-center py-12 text-gray-500 dark:text-gray-400">
                                         <div className="flex flex-col items-center justify-center space-y-2">
@@ -282,7 +287,7 @@ export default function Index({ suratKeluar, klasifikasiList, unitsList, filters
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                suratKeluar.data.map((row, idx) => (
+                                (suratKeluar?.data || []).map((row, idx) => (
                                     <TableRow key={row.id} className="hover:bg-gray-50/60 dark:hover:bg-gray-800/40 transition-colors">
                                         <TableCell className="text-gray-500 font-mono text-xs">
                                             {suratKeluar.from + idx}

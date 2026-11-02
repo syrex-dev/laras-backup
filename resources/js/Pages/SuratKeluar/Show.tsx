@@ -289,10 +289,10 @@ export default function Show({
                             <Card className="p-5 space-y-3">
                                 <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
                                     <Paperclip className="w-4 h-4 text-primary-600" />
-                                    Lampiran Dokumen ({suratKeluar.attachments.length})
+                                    Lampiran Dokumen ({(suratKeluar.attachments || []).length})
                                 </h3>
                                 <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                                    {suratKeluar.attachments.map((att) => (
+                                    {(suratKeluar.attachments || []).map((att) => (
                                         <div key={att.id} className="py-2.5 flex justify-between items-center text-xs">
                                             <span className="font-medium text-gray-800 dark:text-gray-200">{att.file_name}</span>
                                             <a
@@ -321,7 +321,7 @@ export default function Show({
 
                             {suratKeluar.approvals && suratKeluar.approvals.length > 0 ? (
                                 <div className="space-y-4 relative before:absolute before:inset-0 before:left-3.5 before:w-0.5 before:bg-gray-200 dark:before:bg-gray-700">
-                                    {suratKeluar.approvals.map((appr) => {
+                                    {(suratKeluar.approvals || []).map((appr) => {
                                         const isDone = ['diparaf', 'disetujui'].includes(appr.status);
                                         const isRejected = appr.status === 'ditolak';
                                         const isRevising = appr.status === 'revisi';
@@ -384,11 +384,11 @@ export default function Show({
                         <Card className="p-5 space-y-4">
                             <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider border-b pb-2 border-gray-100 dark:border-gray-700 flex items-center gap-2">
                                 <History className="w-4 h-4 text-primary-600" />
-                                Riwayat Versi ({suratKeluar.versions.length})
+                                Riwayat Versi ({(suratKeluar.versions || []).length})
                             </h3>
 
                             <div className="space-y-2">
-                                {suratKeluar.versions.map((ver) => (
+                                {(suratKeluar.versions || []).map((ver) => (
                                     <div
                                         key={ver.id}
                                         onClick={() => {

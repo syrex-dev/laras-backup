@@ -43,11 +43,11 @@ interface CreateProps {
 }
 
 export default function Create({
-    templates,
-    klasifikasiList,
-    unitsList,
-    signers,
-    supportedVariables,
+    templates = [],
+    klasifikasiList = [],
+    unitsList = [],
+    signers = [],
+    supportedVariables = {},
     replyToData,
 }: CreateProps) {
     const { term } = useTerminology();
@@ -177,7 +177,7 @@ export default function Create({
                                     className="text-sm"
                                 >
                                     <option value="">-- Tanpa Template / Naskah Bebas --</option>
-                                    {templates.map((tpl) => (
+                                    {(templates || []).map((tpl) => (
                                         <option key={tpl.id} value={tpl.id}>
                                             {tpl.nama} ({tpl.jenis.replace('_', ' ').toUpperCase()})
                                         </option>
@@ -239,7 +239,7 @@ export default function Create({
                                         Klik variabel untuk menyisipkan ke dalam draf:
                                     </div>
                                     <div className="flex flex-wrap gap-1.5">
-                                        {Object.keys(supportedVariables).map((vKey) => (
+                                        {Object.keys(supportedVariables || {}).map((vKey) => (
                                             <button
                                                 key={vKey}
                                                 type="button"
@@ -290,7 +290,7 @@ export default function Create({
                                         className="text-sm"
                                     >
                                         <option value="">-- Pilih Kode Klasifikasi --</option>
-                                        {klasifikasiList.map((k) => (
+                                        {(klasifikasiList || []).map((k) => (
                                             <option key={k.id} value={k.id}>
                                                 {k.kode_klasifikasi} - {k.nama}
                                             </option>
@@ -310,7 +310,7 @@ export default function Create({
                                         className="text-sm"
                                     >
                                         <option value="">-- Unit Bawaan Pengguna --</option>
-                                        {unitsList.map((u) => (
+                                        {(unitsList || []).map((u) => (
                                             <option key={u.id} value={u.id}>
                                                 {u.name} ({u.code})
                                             </option>
@@ -329,7 +329,7 @@ export default function Create({
                                         className="text-sm"
                                     >
                                         <option value="">-- Pilih Pejabat Penandatangan --</option>
-                                        {signers.map((s) => (
+                                        {(signers || []).map((s) => (
                                             <option key={s.id} value={s.id}>
                                                 {s.name} {s.position ? `(${s.position.name})` : ''}
                                             </option>

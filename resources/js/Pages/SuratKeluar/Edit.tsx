@@ -44,11 +44,11 @@ interface EditProps {
 
 export default function Edit({
     suratKeluar,
-    templates,
-    klasifikasiList,
-    unitsList,
-    signers,
-    supportedVariables,
+    templates = [],
+    klasifikasiList = [],
+    unitsList = [],
+    signers = [],
+    supportedVariables = {},
 }: EditProps) {
     const { term } = useTerminology();
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -175,7 +175,7 @@ export default function Edit({
                                     className="text-sm"
                                 >
                                     <option value="">-- Tanpa Template / Naskah Bebas --</option>
-                                    {templates.map((tpl) => (
+                                    {(templates || []).map((tpl) => (
                                         <option key={tpl.id} value={tpl.id}>
                                             {tpl.nama} {tpl.jenis ? `(${tpl.jenis.replace('_', ' ').toUpperCase()})` : ''}
                                         </option>
@@ -235,7 +235,7 @@ export default function Edit({
                                         Klik variabel untuk menyisipkan ke dalam draf:
                                     </div>
                                     <div className="flex flex-wrap gap-1.5">
-                                        {Object.keys(supportedVariables).map((vKey) => (
+                                        {Object.keys(supportedVariables || {}).map((vKey) => (
                                             <button
                                                 key={vKey}
                                                 type="button"
@@ -296,7 +296,7 @@ export default function Edit({
                                         onChange={(e) => setData('klasifikasi_id', e.target.value)}
                                         className="text-sm"
                                     >
-                                        {klasifikasiList.map((k) => (
+                                        {(klasifikasiList || []).map((k) => (
                                             <option key={k.id} value={k.id}>
                                                 {k.kode_klasifikasi} - {k.nama}
                                             </option>
@@ -315,7 +315,7 @@ export default function Edit({
                                         className="text-sm"
                                     >
                                         <option value="">-- Pilih Pejabat Penandatangan --</option>
-                                        {signers.map((s) => (
+                                        {(signers || []).map((s) => (
                                             <option key={s.id} value={s.id}>
                                                 {s.name} {s.position ? `(${s.position.name})` : ''}
                                             </option>
