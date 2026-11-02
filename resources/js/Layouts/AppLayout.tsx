@@ -20,6 +20,7 @@ import {
     Bell,
     CheckCircle2,
     AlertTriangle,
+    Trash2,
 } from 'lucide-react';
 
 export const AppLayout: React.FC<{ children: React.ReactNode; title?: string }> = ({
@@ -35,9 +36,16 @@ export const AppLayout: React.FC<{ children: React.ReactNode; title?: string }> 
         router.post('/logout');
     };
 
-    const userRoles = auth.user?.roles?.map((r) => r.name) || [];
-    const isPimpinan = userRoles.includes('Pimpinan');
-    const isAdmin = userRoles.includes('Admin') || userRoles.includes('Admin Instansi');
+    const userPermissions = auth.user?.permissions || [];
+    const hasPermission = (permission?: string | string[]) => {
+        if (!permission) return true;
+        if (Array.isArray(permission)) {
+            return permission.some((p) => userPermissions.includes(p));
+        }
+        return userPermissions.includes(permission);
+    };
+
+    const isPimpinan = hasPermission('surat-keluar.setujui') || !!auth.user?.position?.is_penandatangan;
 
     const navigation = [
         {
@@ -51,52 +59,63 @@ export const AppLayout: React.FC<{ children: React.ReactNode; title?: string }> 
             href: '/surat-masuk',
             icon: Mail,
             current: window.location.pathname.startsWith('/surat-masuk'),
+            permission: ['surat-masuk.lihat', 'surat-masuk.buat', 'surat-masuk.kelola'],
         },
         {
             name: 'Disposisi',
             href: '/disposisi',
             icon: FileCheck2,
             current: window.location.pathname.startsWith('/disposisi'),
+            permission: ['disposisi.lihat', 'disposisi.buat', 'disposisi.kelola'],
         },
         {
             name: 'Surat Keluar',
             href: '/surat-keluar',
             icon: Send,
             current: window.location.pathname.startsWith('/surat-keluar'),
+            permission: ['surat-keluar.lihat', 'surat-keluar.buat', 'surat-keluar.setujui', 'surat-keluar.kelola'],
         },
         {
             name: 'Kearsipan Dinamis',
             href: '/klasifikasi-surat',
             icon: Archive,
             current: window.location.pathname.startsWith('/klasifikasi-surat') || window.location.pathname.startsWith('/arsip'),
+            permission: ['arsip.lihat', 'arsip.kelola'],
         },
         {
             name: `Unit Kerja (${term('unit_level_1', 'Jurusan')})`,
-            href: '/organisasi/unit',
+            href: '/unit-kerja',
             icon: Building2,
-            current: window.location.pathname.startsWith('/organisasi'),
-            adminOnly: true,
+            current: window.location.pathname.startsWith('/unit-kerja'),
+            permission: 'organisasi.kelola',
         },
         {
             name: 'Manajemen Pengguna',
             href: '/users',
             icon: Users,
             current: window.location.pathname.startsWith('/users'),
-            adminOnly: true,
+            permission: 'organisasi.kelola',
         },
         {
             name: 'Profil & Kamus Istilah',
             href: '/pengaturan/profil',
             icon: Settings,
             current: window.location.pathname.startsWith('/pengaturan/profil'),
-            adminOnly: true,
+            permission: 'organisasi.kelola',
         },
         {
-            name: 'Lisensi & Sistem',
-            href: '/pengaturan/lisensi',
+            name: 'Audit Trail',
+            href: '/admin/logs',
             icon: ShieldAlert,
-            current: window.location.pathname.startsWith('/pengaturan/lisensi'),
-            adminOnly: true,
+            current: window.location.pathname.startsWith('/admin/logs'),
+            permission: ['organisasi.kelola', 'sistem.pemeliharaan'],
+        },
+        {
+            name: 'Tempat Sampah',
+            href: '/admin/recycle-bin',
+            icon: Trash2,
+            current: window.location.pathname.startsWith('/admin/recycle-bin'),
+            permission: ['organisasi.kelola', 'sistem.pemeliharaan'],
         },
     ];
 
@@ -141,7 +160,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode; title?: string }> 
                         {/* Navigation Links */}
                         <nav className="p-3 space-y-1">
                             {navigation.map((item) => {
-                                if (item.adminOnly && !isAdmin) return null;
+                                if (!hasPermission(item.permission)) return null;
                                 const Icon = item.icon;
                                 return (
                                     <Link
@@ -210,7 +229,7 @@ export const AppLayout: React.FC<{ children: React.ReactNode; title?: string }> 
                                 </div>
                                 <nav className="p-3 space-y-1 overflow-y-auto max-h-[70vh]">
                                     {navigation.map((item) => {
-                                        if (item.adminOnly && !isAdmin) return null;
+                                        if (!hasPermission(item.permission)) return null;
                                         const Icon = item.icon;
                                         return (
                                             <Link
