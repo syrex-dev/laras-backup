@@ -49,8 +49,8 @@
 | **2.2 RolePermissionSeeder & Sync Artisan** | SELESAI | `fecc7d1` | `database/seeders/RolePermissionSeeder.php`, `app/Console/Commands/SyncPermissionsCommand.php` |
 | **2.3 Setup Wizard Hardening** | SELESAI | `3499077` | `app/Http/Controllers/Setup/SetupWizardController.php`, `.env.example`, `tests/Feature/SetupWizardAndTerminologyTest.php` |
 | **2.4 Pemisahan Seeder Produksi vs Demo** | SELESAI | `698d21f` | `database/seeders/ProductionSeeder.php`, `DemoSeeder.php`, `DatabaseSeeder.php` |
-| **2.5 Profil Instansi Ganda** | SEBAGIAN | - | Teridentifikasi `institution_profiles` (kanonikal) vs `profil_organisasi` (prototipe). |
-| **2.6 Template Surat Ganda** | SEBAGIAN | - | Teridentifikasi `template_surat` (kanonikal) vs `templat_surat` (prototipe). |
+| **2.5 Profil Instansi Ganda** | SELESAI | `4600dbd` | `app/Models/ProfilOrganisasi.php`, `app/Models/InstitutionProfile.php`, `database/seeders/DemoSeeder.php` |
+| **2.6 Template Surat Ganda** | SELESAI | `4c40532` | `app/Models/TemplatSurat.php`, `app/Models/TemplateSurat.php`, `database/seeders/SuratDemoSeeder.php` |
 | **2.7 Eliminasi hasRole/hasAnyRole** | SELESAI | `e63fe27` | `app/Domain/SuratKeluar/Policies/SuratKeluarPolicy.php`, `app/Http/Controllers/SuratKeluar/TemplateSuratController.php` |
 | **2.8 DisposisiPolicy Kedalaman 20 & Privasi** | SELESAI | `5f2d519` | `app/Domain/Disposisi/Policies/DisposisiPolicy.php`, `tests/Feature/DisposisiPolicyAndTimelinePrivacyTest.php` |
 | **2.9 Kanal Pembuatan Pengguna Kanonikal** | SELESAI | `88473cb` | `app/Domain/Pengguna/Actions/UserManagementAction.php`, `app/Http/Controllers/Organization/UserController.php` |
