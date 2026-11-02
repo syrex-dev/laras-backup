@@ -43,9 +43,15 @@ class SuratDemoSeeder extends Seeder
         $klsPeminjaman = KlasifikasiSurat::where('kode_klasifikasi', 'PMJ')->first()
             ?? KlasifikasiSurat::firstOrCreate(['kode_klasifikasi' => 'PMJ'], ['nama' => 'Peminjaman']);
 
-        $template = TemplatSurat::firstOrCreate(
-            ['nama_templat' => 'Template Surat Resmi Institusi'],
-            ['path_file' => 'templates/default.html']
+        $template = \App\Domain\SuratKeluar\Models\TemplateSurat::firstOrCreate(
+            ['kode' => 'STD-DEMO'],
+            [
+                'nama' => 'Template Surat Resmi Institusi',
+                'jenis' => \App\Domain\SuratKeluar\Models\TemplateSurat::JENIS_BIASA,
+                'konten_default' => '<p>{isi_surat}</p>',
+                'use_institution_header' => true,
+                'is_active' => true,
+            ]
         );
 
         // 1. Tiga Surat Masuk Demo
@@ -102,6 +108,7 @@ class SuratDemoSeeder extends Seeder
                 'status_approval' => 'draft',
                 'user_id' => $tu->id,
                 'penyetuju_id' => $direktur->id,
+                'template_id' => $template->id,
                 'templat_surat_id' => $template->id,
             ],
             [
@@ -114,6 +121,7 @@ class SuratDemoSeeder extends Seeder
                 'status_approval' => 'approved',
                 'user_id' => $tu->id,
                 'penyetuju_id' => $direktur->id,
+                'template_id' => $template->id,
                 'templat_surat_id' => $template->id,
                 'qr_token' => 'QR-'.Str::uuid()->toString(),
             ],
@@ -127,6 +135,7 @@ class SuratDemoSeeder extends Seeder
                 'status_approval' => 'rejected',
                 'user_id' => $tu->id,
                 'penyetuju_id' => $direktur->id,
+                'template_id' => $template->id,
                 'templat_surat_id' => $template->id,
             ],
         ];

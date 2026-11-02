@@ -2,13 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Builder;
+use App\Domain\SuratKeluar\Models\TemplateSurat;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * @method bool|null delete()
- *
- * @mixin Builder
+ * @deprecated Gunakan App\Domain\SuratKeluar\Models\TemplateSurat sebagai satu-satunya model template surat resmi.
  */
 class TemplatSurat extends Model
 {
