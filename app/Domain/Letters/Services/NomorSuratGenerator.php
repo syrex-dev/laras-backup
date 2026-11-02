@@ -14,8 +14,8 @@ class NomorSuratGenerator
      */
     public function generate(SuratKeluar $surat): string
     {
-        $profil = ProfilOrganisasi::first();
-        $kodePerusahaan = $profil->kode_organisasi ?? 'ORG';
+        $profil = \App\Domain\Instansi\Models\InstitutionProfile::current();
+        $kodePerusahaan = $profil->alias ?? 'POLTEK';
 
         $klasifikasi = $surat->klasifikasi;
         $kodeJenis = $klasifikasi->kode_klasifikasi ?? 'SRT';
@@ -34,8 +34,8 @@ class NomorSuratGenerator
      */
     public function generateMock(?int $klasifikasiId = null): string
     {
-        $profil = ProfilOrganisasi::first();
-        $kodePerusahaan = $profil->kode_organisasi ?? 'ORG';
+        $profil = \App\Domain\Instansi\Models\InstitutionProfile::current();
+        $kodePerusahaan = $profil->alias ?? 'POLTEK';
 
         $klasifikasi = $klasifikasiId ? KlasifikasiSurat::find($klasifikasiId) : null;
         $kodeJenis = $klasifikasi ? $klasifikasi->kode_klasifikasi : 'SRT';

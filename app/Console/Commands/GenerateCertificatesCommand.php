@@ -50,9 +50,9 @@ class GenerateCertificatesCommand extends Command
             $this->line("[1/4] Direktori siap: {$certsDir}");
         }
 
-        $profil = ProfilOrganisasi::first();
-        $orgName = $profil->nama_instansi ?? 'HIMASE Politeknik';
-        $email = $profil->email ?? 'ketua@himase.ac.id';
+        $profil = \App\Domain\Instansi\Models\InstitutionProfile::current();
+        $orgName = $profil->name ?? 'Politeknik Contoh Indonesia';
+        $email = $profil->email ?? 'tatausaha@contoh.ac.id';
 
         $dn = [
             'countryName' => 'ID',

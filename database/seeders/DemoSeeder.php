@@ -20,7 +20,6 @@ class DemoSeeder extends Seeder
 
         $this->call([
             PoliteknikDemoSeeder::class,
-            ProfilOrganisasiSeeder::class,
             SuratMasukDemoSeeder::class,
             DisposisiDemoSeeder::class,
             SuratKeluarDemoSeeder::class,
