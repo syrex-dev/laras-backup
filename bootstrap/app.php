@@ -31,11 +31,15 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        $exceptions->respond(function ($response) {
+        $exceptions->respond(function ($response, $e, $request) {
             if ($response->getStatusCode() === 419) {
-                return back()->with([
-                    'error' => 'Sesi Anda telah kedaluwarsa. Silakan coba masuk kembali.',
-                ]);
+                return redirect()->route('login')->with('error', 'Sesi Anda telah kedaluwarsa. Silakan masuk kembali.');
+            }
+
+            if ($request->header('X-Inertia') && in_array($response->getStatusCode(), [403, 404, 500, 503])) {
+                return \Inertia\Inertia::render('Error', [
+                    'status' => $response->getStatusCode(),
+                ])->toResponse($request)->setStatusCode($response->getStatusCode());
             }
 
             return $response;
